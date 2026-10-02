@@ -25,13 +25,8 @@ export default function SocialIcon({ id }) {
           <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
         </>
       )}
-      {id === 'linkedin' && (
-        <>
-          <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z" />
-          <rect x="2" y="9" width="4" height="12" />
-          <circle cx="4" cy="4" r="2" />
-        </>
-      )}
+      {/* TikTok's note: a stem with a round head and a flag curling off the top. */}
+      {id === 'tiktok' && <path d="M9 12a4 4 0 1 0 4 4V3a5 5 0 0 0 5 5" />}
       {/* A stand-in V mark; swap in VGen's official logo if you have the SVG. */}
       {id === 'vgen' && (
         <>
