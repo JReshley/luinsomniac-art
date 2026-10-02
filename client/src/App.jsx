@@ -47,7 +47,9 @@ function ScrollToTop() {
     if (hash) {
       document.getElementById(hash.slice(1))?.scrollIntoView()
     } else {
-      window.scrollTo(0, 0)
+      // 'instant' overrides the smooth scrolling in styles.css: a new page
+      // should start at the top, not glide up from the old scroll position.
+      window.scrollTo({ top: 0, behavior: 'instant' })
     }
   }, [pathname, hash])
 

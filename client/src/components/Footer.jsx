@@ -1,6 +1,7 @@
 import Button from './Button.jsx'
 import SocialIcon from './SocialIcon.jsx'
 import { EMAIL, SOCIALS } from '../data/contact.js'
+import DisplayTitle from './DisplayTitle.jsx'
 
 export default function Footer() {
   return (
@@ -13,7 +14,7 @@ export default function Footer() {
           {/* The pitch and its buttons stay together: the button is the reply
               to "Let's talk!", so it sits directly under it. */}
           <div className="flex flex-col items-center gap-1 text-center md:items-start md:text-left">
-            <h2 className="font-display text-heading text-bg">Have an idea in mind? Let&rsquo;s talk!</h2>
+            <DisplayTitle as="h2" text="Have an idea in mind? Let’s talk!" className="font-display text-heading text-bg" />
 
             <div className="mt-2 flex w-full flex-col gap-1.5 md:w-auto md:flex-row md:flex-wrap md:items-center">
               <Button variant="accent" href={`mailto:${EMAIL}`} className="max-md:py-2">
@@ -41,7 +42,7 @@ export default function Footer() {
                     rel="noopener noreferrer"
                     aria-label={`${social.label} (opens in a new tab)`}
                     title={social.label}
-                    className="flex size-6 items-center justify-center rounded-full border border-bg/25 text-bg transition-colors hover:border-accent hover:bg-accent hover:text-ink"
+                    className="flex size-6 items-center justify-center rounded-full border border-bg/25 text-bg transition-colors hover:border-accent hover:bg-accent hover:text-ink motion-safe:hover:animate-boing"
                   >
                     <SocialIcon id={social.id} />
                   </a>

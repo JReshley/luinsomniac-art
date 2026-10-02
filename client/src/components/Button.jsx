@@ -15,8 +15,12 @@
 
 import { Link } from 'react-router-dom'
 
+// Hovering lifts a button a hair; pressing squashes it flat (wider and shorter,
+// like a ball hitting the floor) and letting go springs it back.
 const BASE =
-  'inline-flex items-center justify-center gap-1 whitespace-nowrap px-3 py-1.5 font-medium leading-[1.4] no-underline transition-colors'
+  'inline-flex items-center justify-center gap-1 whitespace-nowrap px-3 py-1.5 font-medium leading-[1.4] no-underline ' +
+  'transition-[color,background-color,border-color,translate,scale] duration-200 ease-spring ' +
+  'motion-safe:hover:-translate-y-0.25 motion-safe:active:translate-y-0 motion-safe:active:scale-x-105 motion-safe:active:scale-y-90'
 
 const VARIANTS = {
   primary: 'rounded-sm bg-primary text-surface hover:bg-primary/90',
@@ -34,7 +38,7 @@ export default function Button({ variant = 'primary', onDark = false, href, clas
 
   if (href?.startsWith('/')) {
     return (
-      <Link to={href} className={classes} {...rest}>
+      <Link to={href} viewTransition className={classes} {...rest}>
         {children}
       </Link>
     )

@@ -30,7 +30,7 @@ export default function FeaturedWorks() {
         {/* CSS columns give the masonry layout: cards fill each column top to bottom. */}
         <div className="columns-2 gap-2 lg:columns-3 lg:gap-2.5">
           {FEATURED.map((work, index) => (
-            <div key={work.id} className="mb-2 break-inside-avoid lg:mb-2.5">
+            <div key={work.id} className="hang-in mb-2 break-inside-avoid lg:mb-2.5">
               <WorkCard work={work} onOpen={() => setOpenIndex(index)} />
             </div>
           ))}

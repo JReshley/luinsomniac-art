@@ -4,6 +4,7 @@ import Button from '../components/Button.jsx'
 import Lightbox from '../components/Lightbox.jsx'
 import WorkCard from '../components/WorkCard.jsx'
 import FilterBar from '../components/museum/FilterBar.jsx'
+import DisplayTitle from '../components/DisplayTitle.jsx'
 
 const ALL = 'All'
 
@@ -39,7 +40,7 @@ export default function Museum() {
   return (
     <main id="main" className="mx-auto flex max-w-page flex-col gap-3 px-2 pt-4 pb-6 md:px-3 lg:px-5 lg:pt-6.5 lg:pb-9.5">
       <div className="flex flex-col gap-1">
-        <h1 className="font-display text-display text-primary">The Museum</h1>
+        <DisplayTitle text="The Museum" entrance className="font-display text-display text-primary" />
         <p className="text-ink/65">Wander the halls and see what's on display.</p>
       </div>
 
@@ -53,7 +54,7 @@ export default function Museum() {
       {/* CSS columns give the masonry layout: cards fill each column top to bottom. */}
       <div className="columns-2 gap-2 md:columns-3 lg:columns-4 lg:gap-2.5">
         {shown.map((work, index) => (
-          <div key={work.id} className="mb-2 break-inside-avoid lg:mb-2.5">
+          <div key={work.id} className="hang-in mb-2 break-inside-avoid lg:mb-2.5">
             <WorkCard work={work} onOpen={() => setOpenIndex(index)} />
           </div>
         ))}

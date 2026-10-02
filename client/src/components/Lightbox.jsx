@@ -39,10 +39,12 @@ export default function Lightbox({ work, onClose, onPrev, onNext }) {
       // Like the other navy bands, the focus ring turns orange: blue on navy
       // fails contrast. The backdrop is near-solid so the page behind doesn't
       // show through under the caption.
-      className="m-auto w-full max-w-5xl bg-transparent p-2 backdrop:bg-ink/95 **:focus-visible:outline-accent"
+      className="m-auto w-full max-w-5xl bg-transparent p-2 backdrop:bg-ink/95 motion-safe:backdrop:animate-fade-in **:focus-visible:outline-accent"
     >
       {work && (
-        <div className="flex flex-col gap-2 text-bg">
+        // The frame swings in when the Lightbox opens; stepping between works
+        // only fades the picture (it is keyed, so each work remounts).
+        <div className="flex flex-col gap-2 text-bg motion-safe:animate-pop-in">
           <div className="flex items-center justify-between gap-2">
             <div>
               <h2 id="lightbox-title" className="font-medium">{work.title}</h2>
@@ -55,15 +57,17 @@ export default function Lightbox({ work, onClose, onPrev, onNext }) {
 
           {work.imageUrl ? (
             <img
+              key={work.id}
               src={work.imageUrl}
               alt={`${work.title}, ${work.category}`}
-              className="max-h-[70vh] w-full rounded-lg object-contain"
+              className="max-h-[70vh] w-full rounded-lg object-contain motion-safe:animate-fade-in"
             />
           ) : (
             <Placeholder
+              key={work.id}
               label={work.title}
               dark={isVideo}
-              className={`max-h-[70vh] w-full rounded-lg ${isVideo ? 'border border-bg/10' : 'bg-surface'}`}
+              className={`max-h-[70vh] w-full rounded-lg motion-safe:animate-fade-in ${isVideo ? 'border border-bg/10' : 'bg-surface'}`}
               style={{ aspectRatio: `${work.width} / ${work.height}` }}
             >
               {isVideo ? <PlayIcon size="lg" onDark /> : undefined}

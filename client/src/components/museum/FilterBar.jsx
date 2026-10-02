@@ -12,7 +12,7 @@ export default function FilterBar({ options, active, onChange }) {
             type="button"
             aria-pressed={isActive}
             onClick={() => onChange(option)}
-            className={`cursor-pointer rounded-full border px-2 py-1 font-mono text-small uppercase transition-colors ${
+            className={`cursor-pointer rounded-full border px-2 py-1 font-mono text-small uppercase transition-[color,background-color,border-color,scale] ease-spring motion-safe:active:scale-90 ${
               isActive ? 'border-ink bg-ink text-surface' : 'border-ink/10 bg-surface text-ink hover:border-ink/25'
             }`}
           >

@@ -48,10 +48,11 @@ export default function Header() {
   const closeMenu = () => setMenuOpen(false)
 
   return (
-    <header className="sticky top-0 z-10 border-b border-ink/10 bg-bg/92 backdrop-blur-sm">
+    // Named so a page change wipes only the content below it (styles.css).
+    <header className="sticky top-0 z-10 border-b border-ink/10 bg-bg/92 backdrop-blur-sm [view-transition-name:site-header]">
       <div className="flex items-center justify-between gap-2 px-2 py-1.5 md:px-3 lg:px-5 lg:py-2">
-        <Link className="flex items-center gap-1.5 no-underline md:gap-2" to="/">
-          <img className="block h-[34px] w-[45px] object-contain" src={logoMark} alt="" width="45" height="34" />
+        <Link className="group flex items-center gap-1.5 no-underline md:gap-2" to="/" viewTransition>
+          <img className="block h-[34px] w-[45px] object-contain motion-safe:group-hover:animate-boing" src={logoMark} alt="" width="45" height="34" />
           <span className="flex flex-col">
             <span className="font-medium leading-[1.4] tracking-widest text-ink">LUINSOMNIAC ART</span>
             <span className="font-mono text-small text-ink/65">3D · 2D · ANIMATION</span>
@@ -102,10 +103,11 @@ function NavLinks({ onNavigate, stacked = false }) {
       key={link.id}
       to={link.href}
       end
+      viewTransition
       onClick={onNavigate}
       // Stacked links are full width and 48px tall: an easy thumb target.
       className={({ isActive }) =>
-        `rounded-sm font-medium leading-[1.4] no-underline ${stacked ? 'px-2 py-1.5 text-[1.125rem]' : 'px-1.5 py-1'} ${
+        `rounded-sm font-medium leading-[1.4] no-underline transition-[background-color,scale] ease-spring motion-safe:active:scale-95 ${stacked ? 'px-2 py-1.5 text-[1.125rem]' : 'px-1.5 py-1'} ${
           isActive ? 'bg-primary/10 text-primary' : 'text-ink hover:bg-ink/5'
         }`
       }

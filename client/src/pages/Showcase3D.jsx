@@ -5,6 +5,7 @@ import SectionHeader from '../components/SectionHeader.jsx'
 import WorkCard from '../components/WorkCard.jsx'
 import ModelDetails from '../components/showcase/ModelDetails.jsx'
 import ModelStage from '../components/showcase/ModelStage.jsx'
+import DisplayTitle from '../components/DisplayTitle.jsx'
 
 // The 3D Showcase body from the Figma wireframe (03 · 3D Showcase, node 23:1573):
 // one model up front with its details beside it, and the rest in a grid below.
@@ -31,7 +32,7 @@ export default function Showcase3D() {
 
   return (
     <main id="main" className="mx-auto flex max-w-5xl flex-col gap-1 px-2 pt-4 pb-7 md:px-3 lg:px-5 lg:pt-6.5 lg:pb-9.5">
-      <h1 className="font-display text-display text-primary">3D Showcase</h1>
+      <DisplayTitle text="3D Showcase" entrance className="font-display text-display text-primary" />
       <p className="text-ink/65">Spin, zoom and look closer at each model.</p>
 
       {model ? (
@@ -47,7 +48,7 @@ export default function Showcase3D() {
               <SectionHeader title="More models" />
               <ul className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3 lg:gap-2.5">
                 {others.map((other) => (
-                  <li key={other.id}>
+                  <li key={other.id} className="hang-in">
                     <WorkCard
                       work={{ ...other, type: 'image', width: 4, height: 3, imageUrl: other.posterUrl }}
                       meta={`${formatTris(other.polyCount)} tris`}

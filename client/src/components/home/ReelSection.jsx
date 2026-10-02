@@ -8,7 +8,7 @@ export default function ReelSection() {
       <div className="mx-auto flex max-w-6xl flex-col gap-3">
         <SectionHeader title="Prop Samples" />
 
-        <Placeholder label="Demo reel video" dark className="aspect-video rounded-lg">
+        <Placeholder label="Prop samples video" dark className="aspect-video rounded-lg">
           <PlayIcon size="lg" onDark />
         </Placeholder>
       </div>

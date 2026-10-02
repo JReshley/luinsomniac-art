@@ -3,6 +3,7 @@ import Placeholder from '../components/Placeholder.jsx'
 import SectionHeader from '../components/SectionHeader.jsx'
 import SocialIcon from '../components/SocialIcon.jsx'
 import { EMAIL, SOCIALS } from '../data/contact.js'
+import DisplayTitle from '../components/DisplayTitle.jsx'
 
 // The About page body from the Figma wireframe (04 · About, node 23:1685):
 // a portrait and contact links on the left, the bio, experience timeline and
@@ -28,7 +29,7 @@ const CONTACTS = [
 export default function About() {
   return (
     <main id="main" className="mx-auto flex max-w-5xl flex-col gap-3 px-2 pt-4 pb-7 md:gap-4 md:px-3 lg:px-5 lg:pt-6.5 lg:pb-9.5">
-      <h1 className="font-display text-display text-primary">About</h1>
+      <DisplayTitle text="About" entrance className="font-display text-display text-primary" />
 
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-5">
         <aside className="flex items-center gap-2.5 md:w-[260px] md:shrink-0 md:flex-col md:items-stretch md:gap-2">
@@ -44,7 +45,7 @@ export default function About() {
                     {...(contact.external && { target: '_blank', rel: 'noopener noreferrer' })}
                     aria-label={contact.external ? `${contact.label} (opens in a new tab)` : `Email ${contact.label}`}
                     title={contact.label}
-                    className="flex size-5 items-center justify-center rounded-full border border-ink/20 text-ink transition-[color,background-color,border-color,transform] hover:border-accent hover:bg-accent motion-safe:hover:-translate-y-0.5"
+                    className="flex size-5 items-center justify-center rounded-full border border-ink/20 text-ink transition-colors hover:border-accent hover:bg-accent motion-safe:hover:animate-boing"
                   >
                     <SocialIcon id={contact.id} />
                   </a>

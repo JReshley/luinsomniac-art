@@ -21,7 +21,10 @@ export default function ModelStage({ model }) {
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-1.5">
       <div className="aspect-[4/3] w-full overflow-hidden rounded-lg border border-ink/10 bg-ink/5 md:aspect-[16/10]">
-        <View model={model} viewId={viewId} />
+        {/* Keyed, so swapping model or view fades the new one in. */}
+        <div key={`${model.id}-${viewId}`} className="size-full motion-safe:animate-fade-in">
+          <View model={model} viewId={viewId} />
+        </div>
       </div>
 
       {viewId === 'model' && model.modelUrl && (
