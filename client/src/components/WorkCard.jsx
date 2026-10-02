@@ -2,6 +2,8 @@ import Placeholder from './Placeholder.jsx'
 import PlayIcon from './PlayIcon.jsx'
 
 // One piece of work in a grid. Clicking it calls onOpen, which shows the Lightbox.
+// The small label on the right is the work's category unless `meta` replaces it
+// (the 3D Showcase shows the poly count there).
 
 // Cards stay light until hovered (or focused from the keyboard), when they
 // turn navy with an orange title (and an orange play badge on videos).
@@ -13,7 +15,7 @@ const DARK_ON_HOVER = {
   play: 'group-hover:bg-accent group-hover:text-ink group-focus-visible:bg-accent group-focus-visible:text-ink',
 }
 
-export default function WorkCard({ work, onOpen }) {
+export default function WorkCard({ work, meta = work.category, onOpen }) {
   const isVideo = work.type === 'video'
 
   // The ratio comes from data, so it is set inline: Tailwind only generates
@@ -42,7 +44,7 @@ export default function WorkCard({ work, onOpen }) {
       <span className="flex flex-col gap-0.5 px-2 py-1.5 md:flex-row md:items-center md:justify-between">
         <span className={`font-medium transition-colors group-hover:underline ${DARK_ON_HOVER.title}`}>{work.title}</span>
         <span className={`font-mono text-small text-primary uppercase transition-colors ${DARK_ON_HOVER.category}`}>
-          {work.category}
+          {meta}
         </span>
       </span>
     </button>
