@@ -4,6 +4,8 @@ import SectionHeader from '../components/SectionHeader.jsx'
 import SocialIcon from '../components/SocialIcon.jsx'
 import { EMAIL, SOCIALS } from '../data/contact.js'
 import DisplayTitle from '../components/DisplayTitle.jsx'
+import SlapSticker from '../components/SlapSticker.jsx'
+import { BUNNIES } from '../data/stickers.js'
 
 // The About page body from the Figma wireframe (04 · About, node 23:1685):
 // a portrait and contact links on the left, the bio, experience timeline and
@@ -33,7 +35,16 @@ export default function About() {
 
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:gap-5">
         <aside className="flex items-center gap-2.5 md:w-[260px] md:shrink-0 md:flex-col md:items-stretch md:gap-2">
-          <Placeholder label="Portrait photo" className="aspect-[3/4] w-[120px] shrink-0 rounded-lg md:w-full" />
+          {/* "Violence is an option", slapped on the corner of the photo like
+              a sticker on a laptop lid. */}
+          <div className="relative w-[120px] shrink-0 md:w-full">
+            <Placeholder label="Portrait photo" className="aspect-[3/4] w-full rounded-lg" />
+            <SlapSticker
+              sticker={BUNNIES.violence}
+              tilt="9deg"
+              className="absolute -right-2 -bottom-2 w-[3.75rem] md:-right-4 md:-bottom-1 md:w-[7rem]"
+            />
+          </div>
 
           <div className="flex flex-col gap-1">
             <h2 id="about-contact" className="font-mono text-small text-ink/65 uppercase">Contact</h2>

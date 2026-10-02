@@ -15,9 +15,11 @@ import catWaiter from '../assets/stickers/web/cat-waiter.webp'
 import catWhite from '../assets/stickers/web/cat-white.webp'
 
 import bunnyCool from '../assets/stickers/web/bunny-cool.webp'
+import bunnyCryFirst from '../assets/stickers/web/bunny-cry-first.webp'
 import bunnyFire from '../assets/stickers/web/bunny-fire.webp'
 import bunnyProblem from '../assets/stickers/web/bunny-problem.webp'
 import bunnySurprised from '../assets/stickers/web/bunny-surprised.webp'
+import bunnyViolence from '../assets/stickers/web/bunny-violence.webp'
 import bunnyWorkingHardly from '../assets/stickers/web/bunny-working-hardly.webp'
 
 // Every cat sticker is the same 400 × 312 box shot, so they share one ratio.
@@ -36,8 +38,10 @@ export const CATS = [
 // Each with its width / height, for boxes that have to match its shape.
 export const BUNNIES = {
   cool: { src: bunnyCool, ratio: 417 / 480 }, // finger guns, sunglasses: peeks at "Get in touch" and "Let's collaborate"
+  cryFirst: { src: bunnyCryFirst, ratio: 480 / 286 }, // "I will handle it but I will cry first": flopped on the edge of "What I do"
   fire: { src: bunnyFire, ratio: 480 / 432 }, // arms up in flames: rises behind the Museum buttons
   problem: { src: bunnyProblem, ratio: 363 / 480 }, // "I might be the problem": the 404 page
   surprised: { src: bunnySurprised, ratio: 427 / 480 }, // phone in hand, "!!": slides out from "Read the full story"
+  violence: { src: bunnyViolence, ratio: 323 / 480 }, // "Violence is an option": slapped on the corner of the About portrait
   workingHardly: { src: bunnyWorkingHardly, ratio: 480 / 337 }, // asleep on the laptop: 3D models still in progress
 }

@@ -216,6 +216,16 @@
     .hang-in:nth-child(even) {
       --swing: 4deg;
     }
+
+    /* A sticker slapped down as it comes on screen: it drops in big, squashes
+       flat as it hits the page, then settles. */
+    @media (prefers-reduced-motion: no-preference) {
+      .slap-in {
+        animation: slap-in linear both;
+        animation-timeline: view();
+        animation-range: entry 40% cover 35%;
+      }
+    }
   }
 
   /* Stickers spring as they're lifted and stuck down, and swing as they're
@@ -283,6 +293,13 @@
 
 @keyframes hang-in {
   from { opacity: 0; translate: 0 2rem; rotate: var(--swing); }
+}
+
+@keyframes slap-in {
+  0% { opacity: 0; scale: 1.6; }
+  45% { opacity: 1; scale: 0.92 0.86; }
+  70% { scale: 1.04 1.02; }
+  100% { scale: 1; }
 }
 
 @keyframes page-wipe {
