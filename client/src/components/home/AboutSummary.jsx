@@ -1,4 +1,5 @@
-import Button from '../Button.jsx'
+import PeekButton from '../PeekButton.jsx'
+import { BUNNIES } from '../../data/stickers.js'
 import Chip from '../Chip.jsx'
 import DisplayTitle from '../DisplayTitle.jsx'
 import Placeholder from '../Placeholder.jsx'
@@ -29,7 +30,10 @@ export default function AboutSummary() {
           ))}
         </ul>
 
-        <Button variant="outline" href="/about" className="w-full md:w-auto">Read the full story →</Button>
+        {/* A startled bunny peeks over the top edge, somewhere new each time. */}
+        <PeekButton sticker={BUNNIES.surprised} align="random" show={0.95} size="5rem" variant="outline" href="/about" className="w-full md:w-auto">
+          Read the full story →
+        </PeekButton>
       </div>
     </section>
   )

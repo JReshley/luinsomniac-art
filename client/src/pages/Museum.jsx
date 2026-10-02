@@ -5,6 +5,7 @@ import Lightbox from '../components/Lightbox.jsx'
 import WorkCard from '../components/WorkCard.jsx'
 import FilterBar from '../components/museum/FilterBar.jsx'
 import DisplayTitle from '../components/DisplayTitle.jsx'
+import { CATS } from '../data/stickers.js'
 
 const ALL = 'All'
 
@@ -17,6 +18,9 @@ const SORTED = [...WORKS].sort((a, b) => b.year - a.year)
 
 // How many works show before "Load more" (and how many each click adds).
 const PAGE_SIZE = 8
+
+// The tabby in its box marks the end of the halls once everything is showing.
+const END_CAT = CATS.find((cat) => cat.id === 'tilapia').src
 
 export default function Museum() {
   const [filter, setFilter] = useState(ALL)
@@ -60,11 +64,21 @@ export default function Museum() {
         ))}
       </div>
 
-      {visibleCount < matching.length && (
+      {visibleCount < matching.length ? (
         <div className="flex justify-center pt-1">
           <Button variant="outline" onClick={() => setVisibleCount((count) => count + PAGE_SIZE)} className="w-full md:w-auto">
             Load more
           </Button>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center gap-1 pt-2 text-center">
+          <img
+            src={END_CAT}
+            alt=""
+            loading="lazy"
+            className="w-[7rem] -rotate-3 drop-shadow-[0_4px_4px_rgb(11_21_51/0.2)] motion-safe:hover:animate-boing md:w-[8.5rem]"
+          />
+          <p className="font-mono text-small text-ink/65 uppercase">End of the halls · that&rsquo;s everything on display</p>
         </div>
       )}
 

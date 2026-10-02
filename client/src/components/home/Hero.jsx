@@ -1,7 +1,8 @@
 import { Fragment } from 'react'
-import Button from '../Button.jsx'
+import PeekButton from '../PeekButton.jsx'
 import Chip from '../Chip.jsx'
-import Placeholder from '../Placeholder.jsx'
+import WavingLucas from './WavingLucas.jsx'
+import { BUNNIES } from '../../data/stickers.js'
 
 const HEADLINE = ['I', 'build', 'worlds', 'in']
 
@@ -17,22 +18,6 @@ function replay(event) {
     animation.currentTime = animation.effect.getComputedTiming().delay
     animation.play()
   }
-}
-
-// The character has no move of its own yet, so hovering gives it a squash and
-// stretch, the same bounce as the logo.
-function wobble(event) {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-  event.currentTarget.animate(
-    [
-      { transform: 'none' },
-      { transform: 'scale(1.06, 0.94)' },
-      { transform: 'scale(0.97, 1.03)' },
-      { transform: 'scale(1.01, 0.99)' },
-      { transform: 'none' },
-    ],
-    { duration: 600, easing: 'ease-out' }
-  )
 }
 
 export default function Hero() {
@@ -84,19 +69,29 @@ export default function Hero() {
         </p>
 
         <div className="rise flex w-full flex-col gap-1.5 pt-1.5 md:w-auto md:flex-row" style={{ '--i': 9 }}>
-          <Button href="/museum" className="py-2 md:py-1.5">Step into the Museum →</Button>
-          <Button variant="outline" href="#contact" className="py-2 md:py-1.5">Get in touch</Button>
+          {/* The museum is on fire (it rises from behind the button); the
+              cool bunny peeks over "Get in touch", somewhere new each time. */}
+          <PeekButton sticker={BUNNIES.fire} size="5.5rem" href="/museum" className="w-full py-2 md:w-auto md:py-1.5">
+            Step into the Museum →
+          </PeekButton>
+          <PeekButton
+            sticker={BUNNIES.cool}
+            align="random"
+            show={0.7}
+            size="5rem"
+            variant="outline"
+            href="#contact"
+            className="w-full py-2 md:w-auto md:py-1.5"
+          >
+            Get in touch
+          </PeekButton>
         </div>
       </div>
 
       {/* On phones the character sits above the copy. It pops in alongside the
-          headline. The wrapper takes the hover wobble so it can't cut off the
-          pop-in running on the placeholder itself. */}
-      <div className="order-first mx-auto w-full max-w-[200px] md:order-none md:max-w-[340px]" onMouseEnter={wobble}>
-        <Placeholder
-          label="Waving 3D character"
-          className="aspect-square w-full rounded-lg motion-safe:animate-pop-in motion-safe:[animation-delay:300ms]"
-        />
+          headline, then waves once whenever it's hovered or pressed. */}
+      <div className="order-first mx-auto w-full max-w-[120px] md:order-none md:max-w-[150px] lg:max-w-[130px]">
+        <WavingLucas className="w-full motion-safe:animate-pop-in motion-safe:[animation-delay:300ms]" />
       </div>
     </section>
   )

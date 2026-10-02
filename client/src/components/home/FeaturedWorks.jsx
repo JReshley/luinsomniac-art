@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { WORKS } from '../../data/works.js'
-import Button from '../Button.jsx'
+import { BUNNIES } from '../../data/stickers.js'
+import PeekButton from '../PeekButton.jsx'
 import Lightbox from '../Lightbox.jsx'
 import SectionHeader from '../SectionHeader.jsx'
 import WorkCard from '../WorkCard.jsx'
@@ -24,7 +25,12 @@ export default function FeaturedWorks() {
           title="Featured in the Museum"
           description="A mix of modeling, backgrounds and finished frames."
           onDark
-          action={<Button variant="outline" onDark href="/museum" className="w-full md:w-auto">Enter the Museum →</Button>}
+          action={
+            // The museum is on fire: the flaming bunny rises from behind the button.
+            <PeekButton sticker={BUNNIES.fire} variant="outline" onDark href="/museum" className="w-full md:w-auto">
+              Enter the Museum →
+            </PeekButton>
+          }
         />
 
         {/* CSS columns give the masonry layout: cards fill each column top to bottom. */}

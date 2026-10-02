@@ -1,7 +1,8 @@
-import Button from './Button.jsx'
+import PeekButton from './PeekButton.jsx'
 import SocialIcon from './SocialIcon.jsx'
 import { EMAIL, SOCIALS } from '../data/contact.js'
 import DisplayTitle from './DisplayTitle.jsx'
+import { BUNNIES } from '../data/stickers.js'
 
 // Email first, then the profiles, as on the About page. Only the profiles
 // open in a new tab.
@@ -23,9 +24,20 @@ export default function Footer() {
           <div className="flex flex-col items-center gap-1 text-center md:items-start md:text-left">
             <DisplayTitle as="h2" text="Have an idea in mind? Let’s talk!" className="font-display text-heading text-bg" />
 
-            <Button variant="accent" href={`mailto:${EMAIL}`} className="mt-2 w-full max-md:py-2 md:w-auto">
+            {/* The cool bunny peeks over the top edge, somewhere new each
+                time, checking who wants to collaborate. */}
+            <PeekButton
+              sticker={BUNNIES.cool}
+              align="random"
+              show={0.7}
+              size="5rem"
+              wrapperClassName="mt-2 flex w-full md:w-auto"
+              variant="accent"
+              href={`mailto:${EMAIL}`}
+              className="w-full max-md:py-2 md:w-auto"
+            >
               Let&rsquo;s collaborate
-            </Button>
+            </PeekButton>
           </div>
 
           {/* Email and socials are their own labelled group, kept apart from

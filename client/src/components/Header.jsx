@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import logoMark from '../assets/logo-mark.png'
-import Button from './Button.jsx'
+import PeekButton from './PeekButton.jsx'
+import { BUNNIES } from '../data/stickers.js'
 
 // The site header from the Figma wireframe (01 · Home, node 12:445). It is the
 // same bar on every page, so the only thing that varies is which link is
@@ -62,7 +63,19 @@ export default function Header() {
         {/* Desktop: links inline. */}
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Main">
           <NavLinks />
-          <Button variant="accent" href="#contact">Let&rsquo;s collaborate</Button>
+          {/* The cool bunny hangs upside down from the bottom edge. */}
+          <PeekButton
+            sticker={BUNNIES.cool}
+            side="bottom"
+            align="random"
+            show={0.7}
+            size="4.5rem"
+            wrapperClassName="flex"
+            variant="accent"
+            href="#contact"
+          >
+            Let&rsquo;s collaborate
+          </PeekButton>
         </nav>
 
         {/* Phones and tablets: the hamburger. */}
@@ -86,9 +99,20 @@ export default function Header() {
         className={`${menuOpen ? 'flex' : 'hidden'} flex-col gap-1 border-t border-ink/10 px-2 pt-1.5 pb-3 md:px-3 lg:hidden`}
       >
         <NavLinks onNavigate={closeMenu} stacked />
-        <Button variant="accent" href="#contact" className="mt-1.5 w-full py-2" onClick={closeMenu}>
+        <PeekButton
+          sticker={BUNNIES.cool}
+          side="bottom"
+          align="random"
+          show={0.7}
+          size="4.5rem"
+          wrapperClassName="mt-1.5 flex w-full"
+          variant="accent"
+          href="#contact"
+          className="w-full py-2"
+          onClick={closeMenu}
+        >
           Let&rsquo;s collaborate
-        </Button>
+        </PeekButton>
       </nav>
     </header>
   )
