@@ -40,7 +40,7 @@ export default function Museum() {
     <main id="main" className="mx-auto flex max-w-page flex-col gap-3 px-2 pt-4 pb-6 md:px-3 lg:px-5 lg:pt-6.5 lg:pb-9.5">
       <div className="flex flex-col gap-1">
         <h1 className="font-display text-display text-primary">The Museum</h1>
-        <p className="text-ink/65">Every room, newest first. Filter by discipline.</p>
+        <p className="text-ink/65">Wander the halls and see what's on display.</p>
       </div>
 
       <FilterBar options={FILTERS} active={filter} onChange={changeFilter} />
