@@ -176,7 +176,9 @@
     animation: none;
   }
   ::view-transition-new(root) {
-    animation: page-wipe 0.55s var(--ease-snappy) both;
+    /* Slow enough to see the slanted edge travel across. Ease-in-out so it
+       starts and lands gently instead of rushing at the start. */
+    animation: page-wipe 1s cubic-bezier(0.65, 0, 0.35, 1) both;
     mix-blend-mode: normal;
   }
 }
