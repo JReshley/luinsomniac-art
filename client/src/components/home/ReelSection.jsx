@@ -12,7 +12,7 @@ export default function ReelSection() {
         />
 
         <Placeholder label="Demo reel video" dark className="aspect-video rounded-lg">
-          <PlayIcon size="lg" />
+          <PlayIcon size="lg" onDark />
         </Placeholder>
       </div>
     </section>

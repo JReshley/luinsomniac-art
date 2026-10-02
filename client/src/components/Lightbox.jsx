@@ -63,7 +63,7 @@ export default function Lightbox({ work, onClose, onPrev, onNext }) {
               className={`max-h-[70vh] w-full rounded-lg ${isVideo ? 'border border-bg/10' : 'bg-surface'}`}
               style={{ aspectRatio: `${work.width} / ${work.height}` }}
             >
-              {isVideo ? <PlayIcon size="lg" /> : undefined}
+              {isVideo ? <PlayIcon size="lg" onDark /> : undefined}
             </Placeholder>
           )}
 
