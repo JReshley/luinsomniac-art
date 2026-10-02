@@ -1,41 +1,16 @@
-import { useEffect, useState } from 'react'
-import { listSightings, createSighting, deleteSighting } from './api'
-import DemoNotice from './components/DemoNotice.jsx'
+import { useEffect } from 'react'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import Header from './components/Header.jsx'
 import Footer from './components/Footer.jsx'
 import Home from './pages/Home.jsx'
-
-// A deliberately small working app. Replace all of it with your own project.
-//
-// What is worth keeping is the SHAPE: four states rather than two, a loading
-// message that admits a free-tier server can be slow to wake, and errors that
-// say something rather than rendering an empty list.
-
-const EMPTY_FORM = { place: '', description: '', spookiness: 3 }
+import Museum from './pages/Museum.jsx'
+import Showcase3D from './pages/Showcase3D.jsx'
+import About from './pages/About.jsx'
+import NotFound from './pages/NotFound.jsx'
 
 export default function App() {
-  const [status, setStatus] = useState('loading')   // loading | ready | error
-  const [rows, setRows] = useState([])
-  const [error, setError] = useState(null)
-  const [slow, setSlow] = useState(false)
-  const [form, setForm] = useState(EMPTY_FORM)
-  const [saving, setSaving] = useState(false)
-
-  async function load() {
-    setStatus('loading')
-    setError(null)
-
-    // A free-tier API sleeps. If this is taking a while, say so rather than
-    // spinning silently, which looks broken. See page 6.
-    const timer = setTimeout(() => setSlow(true), 3000)
-  }
-
-
-
-
   return (
     <>
-      {/* First Tab stop: lets keyboard users jump past the nav. Hidden until focused. */}
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:top-1 focus:left-1 focus:z-20 focus:rounded-sm focus:bg-surface focus:px-2 focus:py-1"
@@ -43,11 +18,37 @@ export default function App() {
         Skip to content
       </a>
 
-      <Header current="home" />
+      <ScrollToTop />
 
-      <Home/>
+      <Header />
+
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/museum" element={<Museum />} />
+        <Route path="/showcase" element={<Showcase3D />} />
+        <Route path="/about" element={<About />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
 
       <Footer />
     </>
   )
+}
+
+// The browser only resets scroll on a full page load. A client-side route
+// change keeps the old position, so a link clicked at the bottom of Home would
+// land you at the bottom of Museum. This puts you at the top instead, or at
+// the #section the link asked for.
+function ScrollToTop() {
+  const { pathname, hash } = useLocation()
+
+  useEffect(() => {
+    if (hash) {
+      document.getElementById(hash.slice(1))?.scrollIntoView()
+    } else {
+      window.scrollTo(0, 0)
+    }
+  }, [pathname, hash])
+
+  return null
 }

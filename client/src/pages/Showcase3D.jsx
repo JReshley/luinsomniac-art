@@ -1,5 +1,5 @@
+import PageStub from '../components/PageStub.jsx'
+
 export default function Showcase3D() {
-    return (
-        null
-    )
-};
+  return <PageStub title="3D Showcase">Interactive 3D pieces are on their way.</PageStub>
+}

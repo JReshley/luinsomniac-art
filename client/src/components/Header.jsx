@@ -1,14 +1,11 @@
 import { useEffect, useState } from 'react'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import logoMark from '../assets/logo-mark.png'
 import Button from './Button.jsx'
 
 // The site header from the Figma wireframe (01 · Home, node 12:445). It is the
 // same bar on every page, so the only thing that varies is which link is
-// marked as the current one.
-//
-// There is no router in this project yet. These are plain anchors pointing at
-// the paths the pages/ folder implies; swap the <a> for a <Link> the day a
-// router goes in and nothing else here has to change.
+// marked as the current one. NavLink works that out from the URL.
 //
 // Below lg (phones and tablets) the links fold into a hamburger menu that
 // drops down under the bar. From lg up they sit inline as before.
@@ -20,8 +17,12 @@ const NAV_LINKS = [
   { id: 'about', label: 'About', href: '/about' },
 ]
 
-export default function Header({ current = 'home' }) {
+export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { pathname } = useLocation()
+
+  // Close the menu whenever the page changes, including via Back/Forward.
+  useEffect(() => setMenuOpen(false), [pathname])
 
   // While the menu is open: Esc closes it, and widening the window past the
   // breakpoint closes it so it is not left open behind the inline nav.
@@ -49,17 +50,17 @@ export default function Header({ current = 'home' }) {
   return (
     <header className="sticky top-0 z-10 border-b border-ink/10 bg-bg/92 backdrop-blur-sm">
       <div className="flex items-center justify-between gap-2 px-2 py-1.5 md:px-3 lg:px-5 lg:py-2">
-        <a className="flex items-center gap-1.5 no-underline md:gap-2" href="/">
+        <Link className="flex items-center gap-1.5 no-underline md:gap-2" to="/">
           <img className="block h-[34px] w-[45px] object-contain" src={logoMark} alt="" width="45" height="34" />
           <span className="flex flex-col">
             <span className="font-medium leading-[1.4] tracking-widest text-ink">LUINSOMNIAC ART</span>
             <span className="font-mono text-small text-ink/65">3D · 2D · ANIMATION</span>
           </span>
-        </a>
+        </Link>
 
         {/* Desktop: links inline. */}
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Main">
-          <NavLinks current={current} />
+          <NavLinks />
           <Button variant="accent" href="#contact">Let&rsquo;s collaborate</Button>
         </nav>
 
@@ -83,7 +84,7 @@ export default function Header({ current = 'home' }) {
         aria-label="Main"
         className={`${menuOpen ? 'flex' : 'hidden'} flex-col gap-1 border-t border-ink/10 px-2 pt-1.5 pb-3 md:px-3 lg:hidden`}
       >
-        <NavLinks current={current} onNavigate={closeMenu} stacked />
+        <NavLinks onNavigate={closeMenu} stacked />
         <Button variant="accent" href="#contact" className="mt-1.5 w-full py-2" onClick={closeMenu}>
           Let&rsquo;s collaborate
         </Button>
@@ -92,26 +93,26 @@ export default function Header({ current = 'home' }) {
   )
 }
 
-function NavLinks({ current, onNavigate, stacked = false }) {
-  return NAV_LINKS.map((link) => {
-    const isCurrent = link.id === current
-    return (
-      <a
-        key={link.id}
-        href={link.href}
-        onClick={onNavigate}
-        // Stacked links are full width and 48px tall: an easy thumb target.
-        className={`rounded-sm font-medium leading-[1.4] no-underline ${stacked ? 'px-2 py-1.5 text-[1.125rem]' : 'px-1.5 py-1'} ${
-          isCurrent ? 'bg-primary/10 text-primary' : 'text-ink hover:bg-ink/5'
-        }`}
-        // aria-current is what tells a screen reader which page you are on.
-        // The blue pill alone only says it to people who can see it.
-        aria-current={isCurrent ? 'page' : undefined}
-      >
-        {link.label}
-      </a>
-    )
-  })
+function NavLinks({ onNavigate, stacked = false }) {
+  return NAV_LINKS.map((link) => (
+    // NavLink sets aria-current="page" on the active link, which is what tells
+    // a screen reader which page you are on. The blue pill alone only says it
+    // to people who can see it. `end` stops "/" matching every other page.
+    <NavLink
+      key={link.id}
+      to={link.href}
+      end
+      onClick={onNavigate}
+      // Stacked links are full width and 48px tall: an easy thumb target.
+      className={({ isActive }) =>
+        `rounded-sm font-medium leading-[1.4] no-underline ${stacked ? 'px-2 py-1.5 text-[1.125rem]' : 'px-1.5 py-1'} ${
+          isActive ? 'bg-primary/10 text-primary' : 'text-ink hover:bg-ink/5'
+        }`
+      }
+    >
+      {link.label}
+    </NavLink>
+  ))
 }
 
 // Three bars that turn into an ✕ when the menu is open.

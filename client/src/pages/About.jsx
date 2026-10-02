@@ -1,5 +1,5 @@
+import PageStub from '../components/PageStub.jsx'
+
 export default function About() {
-    return (
-        null
-    )
-};
+  return <PageStub title="About">The full story is on its way.</PageStub>
+}
