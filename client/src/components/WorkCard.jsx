@@ -4,11 +4,12 @@ import PlayIcon from './PlayIcon.jsx'
 // One piece of work in a grid. Clicking it calls onOpen, which shows the Lightbox.
 
 // Cards stay light until hovered (or focused from the keyboard), when they
-// turn navy with an orange tag (and an orange play badge on videos).
+// turn navy with an orange title (and an orange play badge on videos).
 const DARK_ON_HOVER = {
   card: 'hover:border-bg/15 hover:bg-ink hover:text-bg focus-visible:border-bg/15 focus-visible:bg-ink focus-visible:text-bg',
   placeholder: 'group-hover:bg-ink group-hover:text-bg/65 group-focus-visible:bg-ink group-focus-visible:text-bg/65',
-  category: 'group-hover:text-accent group-focus-visible:text-accent',
+  title: 'group-hover:text-accent group-focus-visible:text-accent',
+  category: 'group-hover:text-bg/65 group-focus-visible:text-bg/65',
   play: 'group-hover:bg-accent group-hover:text-ink group-focus-visible:bg-accent group-focus-visible:text-ink',
 }
 
@@ -39,7 +40,7 @@ export default function WorkCard({ work, onOpen }) {
       )}
 
       <span className="flex flex-col gap-0.5 px-2 py-1.5 md:flex-row md:items-center md:justify-between">
-        <span className="font-medium group-hover:underline">{work.title}</span>
+        <span className={`font-medium transition-colors group-hover:underline ${DARK_ON_HOVER.title}`}>{work.title}</span>
         <span className={`font-mono text-small text-primary uppercase transition-colors ${DARK_ON_HOVER.category}`}>
           {work.category}
         </span>
