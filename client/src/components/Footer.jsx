@@ -3,6 +3,13 @@ import SocialIcon from './SocialIcon.jsx'
 import { EMAIL, SOCIALS } from '../data/contact.js'
 import DisplayTitle from './DisplayTitle.jsx'
 
+// Email first, then the profiles, as on the About page. Only the profiles
+// open in a new tab.
+const CONTACTS = [
+  { id: 'email', label: EMAIL, href: `mailto:${EMAIL}` },
+  ...SOCIALS.map((social) => ({ ...social, external: true })),
+]
+
 export default function Footer() {
   return (
     <footer className="bg-ink px-2 py-6 md:px-3 lg:px-5 lg:py-8 **:focus-visible:outline-accent" id="contact">
@@ -11,40 +18,33 @@ export default function Footer() {
           that answers it, then the smaller stuff. */}
       <div className="mx-auto flex max-w-page flex-col gap-4 md:gap-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between md:gap-5">
-          {/* The pitch and its buttons stay together: the button is the reply
+          {/* The pitch and its button stay together: the button is the reply
               to "Let's talk!", so it sits directly under it. */}
           <div className="flex flex-col items-center gap-1 text-center md:items-start md:text-left">
             <DisplayTitle as="h2" text="Have an idea in mind? Let’s talk!" className="font-display text-heading text-bg" />
 
-            <div className="mt-2 flex w-full flex-col gap-1.5 md:w-auto md:flex-row md:flex-wrap md:items-center">
-              <Button variant="accent" href={`mailto:${EMAIL}`} className="max-md:py-2">
-                Let&rsquo;s collaborate
-              </Button>
-              {/* On phones the orange button already opens the mail app, so the
-                  address button would only repeat it. */}
-              <Button variant="outline" onDark href={`mailto:${EMAIL}`} className="max-md:hidden">
-                {EMAIL}
-              </Button>
-            </div>
+            <Button variant="accent" href={`mailto:${EMAIL}`} className="mt-2 w-full max-md:py-2 md:w-auto">
+              Let&rsquo;s collaborate
+            </Button>
           </div>
 
-          {/* Socials are their own labelled group, kept apart from the main
-              action so they read as "also find Luis here", not a rival CTA.
-              A rule separates them on phones, where everything stacks. */}
+          {/* Email and socials are their own labelled group, kept apart from
+              the main action so they read as "other ways to reach Lui", not a
+              rival CTA. The address shows as a tooltip on the mail icon. A rule
+              separates them on phones, where everything stacks. */}
           <div className="flex flex-col items-center gap-1.5 border-t border-bg/10 pt-4 md:items-start md:border-0 md:pt-0">
-            <h3 id="footer-socials" className="font-mono text-small text-bg/65 uppercase">Find me on</h3>
-            <ul className="flex gap-1.5" aria-labelledby="footer-socials">
-              {SOCIALS.map((social) => (
-                <li key={social.id}>
+            <h3 id="footer-contact" className="font-mono text-small text-bg/65 uppercase">Contact</h3>
+            <ul className="flex gap-1.5" aria-labelledby="footer-contact">
+              {CONTACTS.map((contact) => (
+                <li key={contact.id}>
                   <a
-                    href={social.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    aria-label={`${social.label} (opens in a new tab)`}
-                    title={social.label}
+                    href={contact.href}
+                    {...(contact.external && { target: '_blank', rel: 'noopener noreferrer' })}
+                    aria-label={contact.external ? `${contact.label} (opens in a new tab)` : `Email ${contact.label}`}
+                    title={contact.label}
                     className="flex size-6 items-center justify-center rounded-full border border-bg/25 text-bg transition-colors hover:border-accent hover:bg-accent hover:text-ink motion-safe:hover:animate-boing"
                   >
-                    <SocialIcon id={social.id} />
+                    <SocialIcon id={contact.id} />
                   </a>
                 </li>
               ))}

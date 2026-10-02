@@ -1,13 +1,10 @@
 import { useEffect } from 'react'
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 import Header from './components/Header.jsx'
 import Footer from './components/Footer.jsx'
-import Home from './pages/Home.jsx'
-import Museum from './pages/Museum.jsx'
-import Showcase3D from './pages/Showcase3D.jsx'
-import About from './pages/About.jsx'
-import NotFound from './pages/NotFound.jsx'
 
+// The frame around every page. The pages themselves are routes in main.jsx;
+// <Outlet /> is where the current one renders.
 export default function App() {
   return (
     <>
@@ -23,13 +20,7 @@ export default function App() {
 
       <Header />
 
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/museum" element={<Museum />} />
-        <Route path="/showcase" element={<Showcase3D />} />
-        <Route path="/about" element={<About />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Outlet />
 
       <Footer />
     </>
