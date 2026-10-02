@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Button from './Button.jsx'
 
 // A Button with a bunny sticker hiding behind its top edge. Hovering (or
@@ -15,8 +15,12 @@ import Button from './Button.jsx'
 //
 // The bunny sits in a window that ends at the button's top edge and clips
 // anything below it, so it never shows through see-through outline buttons
-// and seems to come up from behind them. Devices without hover never show
-// it: a tap would flash it for a moment before the link goes.
+// and seems to come up from behind them. Touch screens have no hover, so
+// there the bunny is tied to scrolling instead: the nearer the button is to the middle of the screen,
+// the more of it shows (see trackScroll). With reduced motion it just sits
+// half out. A pressed button pops its bunny all the way out.
+//
+//   pinned   keep the bunny out all the time, on every device
 //
 // Everything else is passed to the Button. wrapperClassName sizes the box
 // around it, which replaces the Button in its parent's layout.
@@ -35,6 +39,51 @@ function randomSpot() {
   return Math.random() < 0.5 ? spot : 100 - spot
 }
 
+// Touch screens: one scroll listener shared by every PeekButton on the page.
+// Each host gets --peek-amt, 0 (hidden) to 1 (fully up), from how far its
+// middle is from the middle of the screen: all the way up inside the middle
+// fifth either side, none past the outer 70%, smoothly in between.
+const hosts = new Set()
+let queued = false
+
+function measure() {
+  queued = false
+  const mid = window.innerHeight / 2
+  hosts.forEach((el) => {
+    const box = el.getBoundingClientRect()
+    const away = Math.abs(box.top + box.height / 2 - mid) / mid
+    const t = Math.min(1, Math.max(0, (0.7 - away) / 0.5))
+    el.style.setProperty('--peek-amt', (t * t * (3 - 2 * t)).toFixed(3))
+  })
+}
+
+function queue() {
+  if (queued) return
+  queued = true
+  requestAnimationFrame(measure)
+}
+
+function trackScroll(el) {
+  if (!window.matchMedia('(hover: none)').matches) return
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    el.style.setProperty('--peek-amt', '0.5')
+    return
+  }
+  if (!hosts.size) {
+    window.addEventListener('scroll', queue, { passive: true })
+    window.addEventListener('resize', queue)
+  }
+  hosts.add(el)
+  queue()
+  return () => {
+    hosts.delete(el)
+    if (!hosts.size) {
+      window.removeEventListener('scroll', queue)
+      window.removeEventListener('resize', queue)
+    }
+  }
+}
+
 // How long the bunny takes to duck back down (.peek's transition), so it
 // only moves once it's out of sight.
 const DUCK_MS = 400
@@ -44,6 +93,7 @@ export default function PeekButton({
   align = 'center',
   side = 'top',
   show = 1,
+  pinned = false,
   size = '6.5rem',
   wrapperClassName = 'flex w-full md:w-auto',
   children,
@@ -51,6 +101,9 @@ export default function PeekButton({
 }) {
   const [spot, setSpot] = useState(randomSpot)
   const moving = useRef()
+  const host = useRef()
+
+  useEffect(() => (pinned ? undefined : trackScroll(host.current)), [pinned])
 
   // Where the sticker comes to rest when it's up. A sliver stays hidden
   // even at show = 1, so its die-cut border reads as tucked behind the button.
@@ -69,7 +122,7 @@ export default function PeekButton({
       : {}
 
   return (
-    <span className={`peek-host relative ${wrapperClassName}`} {...shuffle}>
+    <span ref={host} className={`peek-host relative ${pinned ? 'peek-pinned' : ''} ${wrapperClassName}`} {...shuffle}>
       <span
         aria-hidden="true"
         className={`peek-window pointer-events-none absolute overflow-hidden ${below ? 'top-full' : 'bottom-full'} ${ALIGN[align]}`}

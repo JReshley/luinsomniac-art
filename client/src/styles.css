@@ -133,20 +133,35 @@
   }
 
   /* A bunny hiding behind a button (PeekButton.jsx). It waits just below the
-     button's top edge and comes up to --peek-rest when the button is hovered
-     or focused. The glide is with the motion below, so with reduced motion it
-     just appears. */
+     button's top edge. With a mouse it comes up to --peek-rest when the button
+     is hovered or focused. On touch screens there's no hover, so scrolling
+     sets --peek-amt (0 to 1) and the bunny rises by that much of the way. The
+     glide is with the motion below, so with reduced motion it just appears. */
   .peek {
     /* A little past 100%, or flame tips and ear tips show as a speck on the edge. */
     translate: 0 var(--peek-hide, 105%);
   }
-  .peek-host:is(:hover, :focus-within) .peek {
-    translate: 0 var(--peek-rest);
+  @media (hover: hover) {
+    .peek-host:is(:hover, :focus-within) .peek {
+      translate: 0 var(--peek-rest);
+    }
   }
   @media (hover: none) {
-    .peek-window {
-      display: none;
+    .peek {
+      translate: 0
+        calc(
+          var(--peek-hide, 105%) + (var(--peek-rest) - var(--peek-hide, 105%)) *
+            var(--peek-amt, 0)
+        );
     }
+    /* Pressed: all the way out. */
+    .peek-host:active .peek {
+      translate: 0 0;
+    }
+  }
+  /* Out on every device, for a button that should always show its bunny. */
+  .peek-pinned .peek {
+    translate: 0 var(--peek-rest);
   }
 }
 
@@ -222,6 +237,15 @@
   /* The bunny behind a button springs out and back. */
   .peek {
     transition: translate 0.35s var(--ease-spring);
+  }
+  /* Following a scroll, it can't wait on a spring; only a press springs. */
+  @media (hover: none) {
+    .peek {
+      transition: translate 0.12s ease-out;
+    }
+    .peek-host:active .peek {
+      transition: translate 0.35s var(--ease-spring);
+    }
   }
 
   /* Changing page wipes the new one in on a slant, like an editor's wipe.

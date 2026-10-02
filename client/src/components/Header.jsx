@@ -101,11 +101,11 @@ export default function Header() {
         <NavLinks onNavigate={closeMenu} stacked />
         <PeekButton
           sticker={BUNNIES.cool}
-          side="bottom"
+          pinned
           align="random"
           show={0.7}
           size="4.5rem"
-          wrapperClassName="mt-1.5 flex w-full"
+          wrapperClassName="mt-6 flex w-full"
           variant="accent"
           href="#contact"
           className="w-full py-2"
