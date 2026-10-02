@@ -52,6 +52,14 @@
     @apply bg-bg font-sans text-body text-ink antialiased;
   }
 
+  /* Every page's <main> is at least one screen tall, so the footer starts
+     below the fold even when a page has little content. svh keeps it steady
+     while mobile browser bars show and hide; vh is the fallback. */
+  main {
+    min-height: 100vh;
+    min-height: 100svh;
+  }
+
   :focus-visible {
     @apply outline-3 outline-offset-2 outline-primary;
   }
