@@ -19,6 +19,7 @@ export default function App() {
       </a>
 
       <ScrollToTop />
+      <PageTitle />
 
       <Header />
 
@@ -49,6 +50,28 @@ function ScrollToTop() {
       window.scrollTo(0, 0)
     }
   }, [pathname, hash])
+
+  return null
+}
+
+// index.html only sets one <title>, so without this every page shares it and
+// browser tabs, history and screen readers can't tell the pages apart.
+const SITE = 'Luinsomniac Art'
+const PAGE_TITLES = {
+  '/': SITE,
+  '/museum': `The Museum · ${SITE}`,
+  '/showcase': `3D Showcase · ${SITE}`,
+  '/about': `About · ${SITE}`,
+}
+
+function PageTitle() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    // The router treats "/museum/" as "/museum", so the lookup does too.
+    const path = pathname.replace(/\/+$/, '') || '/'
+    document.title = PAGE_TITLES[path] ?? `Page not found · ${SITE}`
+  }, [pathname])
 
   return null
 }

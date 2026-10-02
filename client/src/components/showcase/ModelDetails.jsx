@@ -30,17 +30,17 @@ const ModelDetails = forwardRef(function ModelDetails({ model }, titleRef) {
         {specs.map((spec) => (
           <div key={spec.label} className="flex items-baseline justify-between gap-2 border-b border-ink/10 pb-1 last:border-b-0 last:pb-0">
             <dt className="font-mono text-small text-ink/65 uppercase">{spec.label}</dt>
-            <dd className="text-right text-[0.875rem]">{spec.value}</dd>
+            <dd className="text-right text-caption">{spec.value}</dd>
           </div>
         ))}
       </dl>
 
-      <p className="mt-1.5 text-[0.875rem] leading-[1.6] text-ink/65">{model.description}</p>
+      <p className="mt-1.5 text-caption text-ink/65">{model.description}</p>
 
       {model.processNotes && (
-        <details className="group mt-1 text-[0.875rem]">
+        <details className="group mt-1 text-caption">
           <summary className="cursor-pointer font-medium text-primary hover:underline">Process notes</summary>
-          <p className="mt-1 leading-[1.6] text-ink/65">{model.processNotes}</p>
+          <p className="mt-1 text-ink/65">{model.processNotes}</p>
         </details>
       )}
 

@@ -36,7 +36,10 @@ export default function Lightbox({ work, onClose, onPrev, onNext }) {
       onKeyDown={handleKeyDown}
       onClick={handleClick}
       aria-labelledby="lightbox-title"
-      className="m-auto w-full max-w-5xl bg-transparent p-2 backdrop:bg-ink/85"
+      // Like the other navy bands, the focus ring turns orange: blue on navy
+      // fails contrast. The backdrop is near-solid so the page behind doesn't
+      // show through under the caption.
+      className="m-auto w-full max-w-5xl bg-transparent p-2 backdrop:bg-ink/95 **:focus-visible:outline-accent"
     >
       {work && (
         <div className="flex flex-col gap-2 text-bg">

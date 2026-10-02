@@ -93,6 +93,10 @@ function ModelViewer({ model }) {
     import('@google/model-viewer')
   }, [])
 
+  // The turntable spin never stops on its own, so it is left off for anyone
+  // who has asked their system for less motion. They can still drag to rotate.
+  const spin = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
   return (
     <model-viewer
       key={model.modelUrl}
@@ -100,7 +104,7 @@ function ModelViewer({ model }) {
       poster={model.posterUrl ?? undefined}
       alt={model.alt}
       camera-controls=""
-      auto-rotate=""
+      {...(spin && { 'auto-rotate': '' })}
       touch-action="pan-y"
       shadow-intensity="1"
       style={{ width: '100%', height: '100%', '--poster-color': 'transparent' }}

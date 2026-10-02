@@ -15,13 +15,15 @@ export default function Services() {
 
         <ul className="grid gap-2 md:grid-cols-2 lg:grid-cols-4">
           {SERVICES.map((service) => (
+            // The cards aren't links, so the hover is only an orange edge, not a
+            // full orange fill that would say "click me".
             <li
               key={service.title}
-              className="group flex flex-col gap-1 rounded-lg border border-surface/20 bg-surface/10 p-2.5 text-bg transition-colors hover:border-accent hover:bg-accent hover:text-ink"
+              className="flex flex-col gap-1 rounded-lg border border-surface/20 bg-surface/10 p-2.5 text-bg transition-colors hover:border-accent"
             >
               <h3 className="font-medium">{service.title}</h3>
-              {/* group-hover: changes this text when the whole card is hovered, not just the paragraph. */}
-              <p className="text-bg/80 group-hover:text-ink/80">{service.body}</p>
+              {/* Full-strength text: at /80 it was 3.8 : 1 on this tinted card. */}
+              <p>{service.body}</p>
             </li>
           ))}
         </ul>

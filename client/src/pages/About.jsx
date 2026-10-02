@@ -55,12 +55,14 @@ export default function About() {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <p className="text-justify hyphens-auto text-[1.0625rem] leading-[1.6] md:text-[1.1875rem] md:leading-[1.62]">
+          {/* Left-aligned, not justified: in a column this narrow, justify stretches
+              the word gaps into visible rivers, worst on phones. */}
+          <p className="max-w-[40rem] text-lead">
             Multimedia artist specializing in 3D modeling, illustration and visual storytelling. I like the
             unglamorous middle of production — the pass where a prop stops looking like geometry and starts
             looking like something someone owns.
           </p>
-          <p className="text-justify hyphens-auto text-ink/65">
+          <p className="max-w-[40rem] text-ink/65">
             Most of my work sits between departments: modeling props that have to match a painted background,
             designing characters that have to survive being rigged, lighting shots that have to cut together.
             That range is deliberate — it means fewer handoffs and fewer surprises.
@@ -79,7 +81,7 @@ export default function About() {
                   <span className="shrink-0 font-mono text-small text-ink/65 uppercase transition-colors group-hover:text-ink md:w-[110px] md:pt-0.5">{entry.years}</span>
                   <div className="flex flex-col gap-0.5">
                     <span className="font-medium">{entry.role}</span>
-                    <span className="text-[0.84375rem] text-ink/65">{entry.detail}</span>
+                    <span className="text-caption text-ink/65">{entry.detail}</span>
                   </div>
                 </li>
               ))}

@@ -24,8 +24,12 @@
   --text-display--line-height: 1.05;
   --text-heading: clamp(1.625rem, 1.405rem + 0.939vw, 2.25rem);
   --text-heading--line-height: 1.15;
+  --text-lead: clamp(1.0625rem, 1.003rem + 0.25vw, 1.1875rem);
+  --text-lead--line-height: 1.6;
   --text-body: 1rem;
   --text-body--line-height: 1.6;
+  --text-caption: 0.875rem;
+  --text-caption--line-height: 1.6;
   --text-small: 0.75rem;
   --text-small--line-height: 1.4;
   --text-small--letter-spacing: 0.06em;
