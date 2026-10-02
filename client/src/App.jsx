@@ -35,6 +35,14 @@ export default function App() {
 
   return (
     <>
+      {/* First Tab stop: lets keyboard users jump past the nav. Hidden until focused. */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-1 focus:left-1 focus:z-20 focus:rounded-sm focus:bg-surface focus:px-2 focus:py-1"
+      >
+        Skip to content
+      </a>
+
       <Header current="home" />
 
       <Home/>

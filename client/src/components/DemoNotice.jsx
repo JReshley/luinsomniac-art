@@ -11,7 +11,7 @@ export default function DemoNotice() {
   if (!USING_MOCK_API) return null
 
   return (
-    <div className="demo-notice" role="status">
+    <div className="my-3 rounded-sm border border-accent bg-accent/10 px-2 py-1.5" role="status">
       <strong>Demo mode.</strong> This deployment exists to show the interface.
       It runs on a <strong>simulated backend</strong>: everything you add is
       stored in your own browser, is shared with nobody, and disappears when you

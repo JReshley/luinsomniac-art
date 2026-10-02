@@ -10,16 +10,15 @@ const SECTIONS = [
 
 export default function Home() {
   return (
-    <main className="home">
-        // Placeholders
+    <main id="main" className="bg-surface">
       {SECTIONS.map((section) => (
         <section
           key={section.id}
           id={section.id}
-          className="placeholder"
+          className="flex items-center justify-center border-b border-dashed border-ink/10"
           style={{ minHeight: section.height }}
         >
-          <span className="placeholder__label">{section.label}</span>
+          <span className="font-mono text-small text-ink/65 uppercase">{section.label}</span>
         </section>
       ))}
     </main>
