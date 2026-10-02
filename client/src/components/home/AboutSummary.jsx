@@ -7,7 +7,7 @@ const SOFTWARE = ['Blender', 'Photoshop', 'After Effects', 'Krita', 'Audition']
 export default function AboutSummary() {
   return (
     <section className="mx-auto flex max-w-6xl flex-col gap-5 px-2 py-6 md:flex-row md:items-center md:px-3 lg:px-5 lg:py-8">
-      <Placeholder label="Portrait photo" className="aspect-[3/4] w-full max-w-[300px] shrink-0 rounded-lg" />
+      <Placeholder label="Portrait photo" className="mx-auto aspect-[3/4] w-full max-w-[240px] shrink-0 rounded-lg md:mx-0 md:max-w-[300px]" />
 
       <div className="flex flex-col items-start gap-2">
         <h2 className="font-display text-heading text-primary">About Lui</h2>
@@ -25,7 +25,7 @@ export default function AboutSummary() {
           ))}
         </ul>
 
-        <Button variant="outline" href="/about">Read the full story →</Button>
+        <Button variant="outline" href="/about" className="w-full md:w-auto">Read the full story →</Button>
       </div>
     </section>
   )

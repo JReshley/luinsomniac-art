@@ -24,7 +24,7 @@ export default function FeaturedWorks() {
           title="Featured in the Museum"
           description="A mix of modeling, backgrounds and finished frames."
           onDark
-          action={<Button variant="outline" onDark href="/museum">Enter the Museum →</Button>}
+          action={<Button variant="outline" onDark href="/museum" className="w-full md:w-auto">Enter the Museum →</Button>}
         />
 
         {/* CSS columns give the masonry layout: cards fill each column top to bottom. */}

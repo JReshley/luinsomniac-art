@@ -4,7 +4,7 @@ import Placeholder from '../Placeholder.jsx'
 
 export default function Hero() {
   return (
-    <section className="mx-auto grid max-w-page items-end gap-5 px-2 py-6 md:grid-cols-[1.35fr_0.65fr] md:px-3 lg:px-5 lg:py-8">
+    <section className="mx-auto grid max-w-page items-end gap-3 px-2 pt-3 pb-6 md:gap-5 md:py-6 md:grid-cols-[1.35fr_0.65fr] md:px-3 lg:px-5 lg:py-8">
       <div className="flex flex-col items-start gap-2.5">
         <Chip variant="outline">
           <span aria-hidden="true" className="size-0.75 rounded-full bg-primary" />
@@ -26,15 +26,15 @@ export default function Hero() {
         </p>
 
         <div className="flex w-full flex-col gap-1.5 pt-1.5 md:w-auto md:flex-row">
-          <Button href="/museum">Step into the Museum →</Button>
-          <Button variant="outline" href="#contact">Get in touch</Button>
+          <Button href="/museum" className="py-2 md:py-1.5">Step into the Museum →</Button>
+          <Button variant="outline" href="#contact" className="py-2 md:py-1.5">Get in touch</Button>
         </div>
       </div>
 
       {/* On phones the character sits above the copy. */}
       <Placeholder
         label="Waving 3D character"
-        className="order-first mx-auto aspect-square w-full max-w-[340px] rounded-lg md:order-none"
+        className="order-first mx-auto aspect-square w-full max-w-[200px] md:max-w-[340px] rounded-lg md:order-none"
       />
     </section>
   )
