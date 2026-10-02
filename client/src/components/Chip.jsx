@@ -6,9 +6,9 @@ const STYLES = {
   outline: 'border border-ink/20 text-ink',
 }
 
-export default function Chip({ variant = 'static', children }) {
+export default function Chip({ variant = 'static', className = '', children }) {
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 font-mono text-small uppercase ${STYLES[variant]}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 font-mono text-small uppercase ${STYLES[variant]} ${className}`}>
       {children}
     </span>
   )
