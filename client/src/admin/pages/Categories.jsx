@@ -13,11 +13,14 @@ import {
   LoadError,
   Notice,
   readDraft,
+  RefreshStatus,
   rules,
   Skeleton,
   TextField,
   useDraft,
   useValidation,
+  withoutRow,
+  withRow,
 } from '../ui.jsx'
 
 // The Museum's filter chips, in the order they appear (page pattern:
@@ -29,7 +32,8 @@ const DRAFT_KEY = 'new-category'
 const checkName = rules.required('Give the category a name.')
 
 export default function Categories() {
-  const { data: categories, error } = useApi(listCategories, [])
+  const api = useApi(listCategories, [])
+  const { data: categories, error } = api
   const [toDelete, setToDelete] = useState(null)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState({ tone: 'info', text: '' })
@@ -40,12 +44,15 @@ export default function Categories() {
   useDraft(DRAFT_KEY, newName, newName.trim() !== '')
 
   async function move(index, by) {
-    const ids = categories.map((category) => category.id)
-    ;[ids[index], ids[index + by]] = [ids[index + by], ids[index]]
+    const rows = [...categories]
+    ;[rows[index], rows[index + by]] = [rows[index + by], rows[index]]
+    // Shown in the new order at once; put back if the save fails.
+    api.setData(rows)
     try {
-      await reorderCategories(ids)
+      await reorderCategories(rows.map((category) => category.id))
       setNotice({ tone: 'info', text: 'Saved the new order.' })
     } catch (err) {
+      api.reload()
       setNotice({ tone: 'error', text: err.message })
     }
   }
@@ -54,7 +61,8 @@ export default function Categories() {
     event.preventDefault()
     if (validation.checkAll({ name: newName })) return focusField('name')
     try {
-      await createCategory({ name: newName })
+      const created = await createCategory({ name: newName })
+      api.setData((rows) => withRow(rows, { workCount: 0, ...created }))
       setNewName('')
       setNotice({ tone: 'info', text: 'Added the category at the end.' })
     } catch (err) {
@@ -67,6 +75,7 @@ export default function Categories() {
     setBusy(true)
     try {
       await deleteCategory(toDelete.id)
+      api.setData((rows) => withoutRow(rows, toDelete.id))
       setNotice({ tone: 'info', text: `Removed “${toDelete.name}”.` })
     } catch (err) {
       setNotice({ tone: 'error', text: err.message })
@@ -78,7 +87,7 @@ export default function Categories() {
 
   return (
     <>
-      <AdminPageHeader title="Categories">The filter chips on the Museum page, in this order. Each work can be in one.</AdminPageHeader>
+      <AdminPageHeader title="Categories" status={<RefreshStatus sources={[api]} />}>The filter chips on the Museum page, in this order. Each work can be in one.</AdminPageHeader>
 
       <div className="flex max-w-[40rem] flex-col gap-3">
         <Notice tone={notice.tone}>{notice.text}</Notice>
@@ -107,7 +116,10 @@ export default function Categories() {
                       isLast={index === categories.length - 1}
                       onMove={(by) => move(index, by)}
                       onDelete={() => setToDelete(category)}
-                      onSaved={() => setNotice({ tone: 'info', text: 'Saved.' })}
+                      onSaved={(saved) => {
+                        api.setData((rows) => withRow(rows, saved))
+                        setNotice({ tone: 'info', text: 'Saved.' })
+                      }}
                     />
                   ))}
                 </ol>
@@ -161,9 +173,9 @@ function CategoryRow({ category, labelledBy, isFirst, isLast, onMove, onDelete, 
     if (message) return setError(message)
     if (name.trim() === category.name) return
     try {
-      await updateCategory(category.id, { name })
+      const saved = await updateCategory(category.id, { name })
       setError('')
-      onSaved()
+      onSaved(saved)
     } catch (err) {
       setError(err.message)
     }

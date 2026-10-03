@@ -36,7 +36,9 @@ export function MediaThumb({ media, className = 'size-8' }) {
 
 export function MediaField({ label, kind, mediaId, library, onChange, hint, error, required = false }) {
   const [open, setOpen] = useState(false)
-  const media = library.find((item) => item.id === mediaId) ?? null
+  // The file just picked or added, until the library reload brings it in.
+  const [picked, setPicked] = useState(null)
+  const media = library.find((item) => item.id === mediaId) ?? (picked?.id === mediaId ? picked : null)
   const copy = KIND_COPY[kind]
 
   return (
@@ -74,8 +76,9 @@ export function MediaField({ label, kind, mediaId, library, onChange, hint, erro
         library={library}
         selectedId={mediaId}
         onClose={() => setOpen(false)}
-        onPick={(picked) => {
-          onChange(picked)
+        onPick={(chosen) => {
+          setPicked(chosen)
+          onChange(chosen)
           setOpen(false)
         }}
       />

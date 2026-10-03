@@ -26,12 +26,15 @@ import {
   LoadError,
   Notice,
   readDraft,
+  RefreshStatus,
   rules,
   Skeleton,
   TextArea,
   TextField,
   useDraft,
   useValidation,
+  withoutRow,
+  withRow,
 } from '../ui.jsx'
 
 // Everything site-wide that isn't a work, on one page (page pattern:
@@ -270,18 +273,22 @@ const linkRules = {
 
 function Contact() {
   const { data: settings } = useApi(getSettings, [])
-  const { data: links, error } = useApi(listSocialLinks, [])
+  const linksApi = useApi(listSocialLinks, [])
+  const { data: links, error } = linksApi
   const [toDelete, setToDelete] = useState(null)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState({ tone: 'info', text: '' })
 
   async function move(index, by) {
-    const ids = links.map((link) => link.id)
-    ;[ids[index], ids[index + by]] = [ids[index + by], ids[index]]
+    const rows = [...links]
+    ;[rows[index], rows[index + by]] = [rows[index + by], rows[index]]
+    // Shown in the new order at once; put back if the save fails.
+    linksApi.setData(rows)
     try {
-      await reorderSocialLinks(ids)
+      await reorderSocialLinks(rows.map((link) => link.id))
       setNotice({ tone: 'info', text: 'Saved the new order.' })
     } catch (err) {
+      linksApi.reload()
       setNotice({ tone: 'error', text: err.message })
     }
   }
@@ -290,6 +297,7 @@ function Contact() {
     setBusy(true)
     try {
       await deleteSocialLink(toDelete.id)
+      linksApi.setData((rows) => withoutRow(rows, toDelete.id))
       clearDraft(`link-${toDelete.id}`)
       setNotice({ tone: 'info', text: `Removed the ${toDelete.platform} link.` })
     } catch (err) {
@@ -306,7 +314,10 @@ function Contact() {
         {settings && <EmailForm saved={settings.contact_email.value ?? ''} />}
 
         <div className="flex flex-col gap-1 border-t border-ink/10 pt-2">
-          <h3 className="leading-[1.25] font-bold">Social links</h3>
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <h3 className="leading-[1.25] font-bold">Social links</h3>
+            <RefreshStatus sources={[linksApi]} />
+          </div>
           <Notice tone={notice.tone}>{notice.text}</Notice>
           {!links && (error ? <LoadError what="social links" error={error} /> : <Skeleton rows={2} />)}
           {links?.length === 0 && (
@@ -322,11 +333,12 @@ function Contact() {
                   isLast={index === links.length - 1}
                   onMove={(by) => move(index, by)}
                   onDelete={() => setToDelete(link)}
+                  onSaved={(saved) => linksApi.setData((rows) => withRow(rows, saved))}
                 />
               ))}
             </ol>
           )}
-          {links && <AddLink />}
+          {links && <AddLink onAdded={(created) => linksApi.setData((rows) => withRow(rows, created))} />}
         </div>
       </div>
 
@@ -390,7 +402,7 @@ function EmailForm({ saved: fromServer }) {
 
 // The handle isn't shown on the site, so it isn't asked for; an existing one is
 // left as it is.
-function LinkRow({ link, isFirst, isLast, onMove, onDelete }) {
+function LinkRow({ link, isFirst, isLast, onMove, onDelete, onSaved }) {
   const key = `link-${link.id}`
   const fromServer = { platform: link.platform, url: link.url, visible: link.visible }
   const { initial } = useInitial(key, fromServer)
@@ -413,7 +425,8 @@ function LinkRow({ link, isFirst, isLast, onMove, onDelete }) {
     const first = validation.checkAll(form)
     if (first) return focusField(`${first}-${link.id}`)
     try {
-      await updateSocialLink(link.id, form)
+      const updated = await updateSocialLink(link.id, form)
+      onSaved(updated)
       setSaved(true)
     } catch (err) {
       if (err.field) validation.set(err.field, err.message)
@@ -444,7 +457,7 @@ function LinkRow({ link, isFirst, isLast, onMove, onDelete }) {
   )
 }
 
-function AddLink() {
+function AddLink({ onAdded }) {
   const blank = { platform: '', url: '', visible: true }
   const { initial } = useInitial('new-link', blank)
   const [form, setForm] = useState(initial)
@@ -463,7 +476,8 @@ function AddLink() {
     const first = validation.checkAll(form)
     if (first) return focusField(`new-${first}`)
     try {
-      await createSocialLink(form)
+      const created = await createSocialLink(form)
+      onAdded(created)
       setForm(blank)
     } catch (err) {
       if (err.field) validation.set(err.field, err.message)

@@ -3,15 +3,19 @@ import { subscribe } from './changes.js'
 
 // Loads data from the API for a component:
 //
-//   const { data, error, loading, reload } = useApi(() => listWorks({ kind }), [kind])
+//   const works = useApi(() => listWorks({ kind }), [kind])
+//   works.data       the last good answer (undefined until the first arrives)
+//   works.error      why the last call failed, or null
+//   works.loading    a call is in flight
+//   works.reload()   call again now
+//   works.setData(f) change the shown data straight away, e.g. drop a row the
+//                    admin just deleted, without waiting for the reload
 //
-// It calls again when `deps` change, and whenever anything is saved (in this
-// tab or another), so a list stays current after an edit elsewhere. While it
-// reloads, the previous `data` stays on screen instead of flashing empty.
-//
-// In phase 6 the "anything saved" signal has to come from somewhere else
-// (refetch after this tab's own saves, or on window focus). The hook's shape
-// stays the same.
+// It calls again when `deps` change, and whenever anything is saved (changes.js:
+// after every write, and when the tab regains focus), so a list stays current.
+// While it reloads, the previous `data` stays on screen instead of flashing
+// empty; a reload that fails keeps it too, with `error` set, so the screen can
+// say the list may be out of date (see <RefreshStatus> in admin/ui.jsx).
 export function useApi(load, deps) {
   const [state, setState] = useState({ data: undefined, error: null, loading: true })
   const latest = useRef(0)
@@ -32,6 +36,13 @@ export function useApi(load, deps) {
     }
   }, [run])
 
+  // Shows a change at once. The reload the save itself started (http.js and
+  // the mock notify after the write is done) still lands afterwards and
+  // replaces this with what the server has, so the two can't drift apart.
+  const setData = useCallback((update) => {
+    setState((prev) => ({ ...prev, data: typeof update === 'function' ? update(prev.data) : update }))
+  }, [])
+
   useEffect(() => {
     reload()
     const unsubscribe = subscribe(reload)
@@ -42,5 +53,5 @@ export function useApi(load, deps) {
     }
   }, [reload])
 
-  return { ...state, reload }
+  return { ...state, reload, setData }
 }

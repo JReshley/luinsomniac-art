@@ -294,6 +294,42 @@ export function LoadError({ what, error }) {
   )
 }
 
+// The line beside a page title about data that's already on screen: a quiet
+// "Updating…" while it reloads after a save (only if that takes over 300ms, so
+// it doesn't flicker), and a warning with Try again when the reload failed and
+// what's shown may be out of date. `sources` are useApi() results.
+export function RefreshStatus({ sources }) {
+  const shown = sources.filter((source) => source.data !== undefined)
+  const failed = shown.find((source) => source.error)
+  const busy = shown.some((source) => source.loading)
+  const [slow, setSlow] = useState(false)
+
+  useEffect(() => {
+    if (!busy) return setSlow(false)
+    const timer = setTimeout(() => setSlow(true), 300)
+    return () => clearTimeout(timer)
+  }, [busy])
+
+  if (failed && !busy) {
+    return (
+      <span role="alert" className="flex flex-wrap items-center gap-x-1 text-caption text-ink">
+        <span><span aria-hidden="true">⚠ </span>Couldn’t refresh, so this may be out of date.</span>
+        <LinkButton onClick={() => shown.forEach((source) => source.reload())}>Try again</LinkButton>
+      </span>
+    )
+  }
+  return (
+    <span role="status" className="text-caption text-ink/65">
+      {busy && slow ? 'Updating…' : ''}
+    </span>
+  )
+}
+
+// Changing a loaded list straight after a save, before the reload confirms it.
+// Both are safe to run on a list that already has the change.
+export const withRow = (rows, row) => (rows && row?.id ? (rows.some((item) => item.id === row.id) ? rows.map((item) => (item.id === row.id ? { ...item, ...row } : item)) : [...rows, row]) : rows)
+export const withoutRow = (rows, id) => rows?.filter((item) => item.id !== id)
+
 // Grey blocks in the shape of what's loading, shown while data is on its way.
 // They pulse only for people who haven't asked for less motion.
 export function Skeleton({ rows = 4, className = '' }) {

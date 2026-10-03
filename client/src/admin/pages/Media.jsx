@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { deleteMedia, formatBytes, listMedia, updateMedia, useApi } from '../../api/index.js'
 import AdminPageHeader from '../AdminPageHeader.jsx'
 import { AddMedia, MediaThumb, SOURCE_LABELS } from '../MediaPicker.jsx'
-import { Button, ConfirmDialog, Dialog, EmptyState, LinkButton, ListToolbar, LoadError, Notice, PAGE_SIZE, Pager, ROW_INPUT, Skeleton } from '../ui.jsx'
+import { Button, ConfirmDialog, Dialog, EmptyState, LinkButton, ListToolbar, LoadError, Notice, PAGE_SIZE, Pager, RefreshStatus, ROW_INPUT, Skeleton, withoutRow } from '../ui.jsx'
 
 // The asset library (page pattern: List, as a grid because it's pictures):
 // everything the site uses, wherever it's stored. Filters live in the address
@@ -24,7 +24,8 @@ export default function Media() {
   const [page, setPage] = useState(1)
   const [adding, setAdding] = useState(false)
 
-  const { data: media, error } = useApi(() => listMedia({ kind, unused }), [kind, unused])
+  const api = useApi(() => listMedia({ kind, unused }), [kind, unused])
+  const { data: media, error } = api
   const [toDelete, setToDelete] = useState(null)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState({ tone: 'info', text: '' })
@@ -55,6 +56,7 @@ export default function Media() {
     setBusy(true)
     try {
       await deleteMedia(toDelete.id)
+      api.setData((rows) => withoutRow(rows, toDelete.id))
       setNotice({ tone: 'info', text: 'Removed the file.' })
     } catch (err) {
       setNotice({ tone: 'error', text: err.message })
@@ -66,7 +68,7 @@ export default function Media() {
 
   return (
     <>
-      <AdminPageHeader title="Media" actions={<Button onClick={() => setAdding(true)}>Add file</Button>}>
+      <AdminPageHeader title="Media" status={<RefreshStatus sources={[api]} />} actions={<Button onClick={() => setAdding(true)}>Add file</Button>}>
         Every file the site uses. Describe images in their alt text, and remove files nothing uses.
       </AdminPageHeader>
 
@@ -117,6 +119,10 @@ export default function Media() {
           heading="Upload or link"
           onAdded={(added) => {
             setAdding(false)
+            // Newest first, like the list. Skipped if the filters would hide it.
+            if (!added.duplicate && (!kind || added.kind === kind)) {
+              api.setData((rows) => (rows && !rows.some((row) => row.id === added.id) ? [{ usedBy: [], ...added }, ...rows] : rows))
+            }
             setNotice({ tone: 'info', text: added.duplicate ? 'That file is already in the library.' : 'Added. Describe it in its alt text below.' })
           }}
         />

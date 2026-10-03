@@ -47,6 +47,12 @@ export function createApp({ verifyToken, storage, allowedOrigins }) {
   app.use('/api', publicRoutes({ storage }))
 
   const admin = express.Router()
+  // Private, and changes with every save: no browser or CDN may keep a copy,
+  // or a list could show rows that were already deleted.
+  admin.use((request, response, next) => {
+    response.set('Cache-Control', 'no-store')
+    next()
+  })
   admin.use(requireAdmin(verifyToken))
   // Who is signed in, once the allowlist has accepted them. The admin screens
   // call this right after signing in to learn the name to greet them with.

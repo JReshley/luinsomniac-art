@@ -255,6 +255,8 @@ function WorkForm({ kind, work }) {
   const [confirmArchive, setConfirmArchive] = useState(false)
   // Which kind the gallery picker is open for: 'image', 'video' or closed.
   const [galleryPicker, setGalleryPicker] = useState(null)
+  // Files added from the gallery picker, until the library reload brings them in.
+  const [addedMedia, setAddedMedia] = useState([])
   const errorRef = useRef(null)
   const validation = useValidation(FIELD_RULES)
 
@@ -408,7 +410,7 @@ function WorkForm({ kind, work }) {
   // Each gallery item with its file from the library; items whose file has
   // gone are dropped by the server on save, so they aren't shown.
   const galleryItems = form.gallery
-    .map((item) => ({ ...item, media: library.find((media) => media.id === item.mediaId) }))
+    .map((item) => ({ ...item, media: library.find((media) => media.id === item.mediaId) ?? addedMedia.find((media) => media.id === item.mediaId) }))
     .filter((item) => item.media)
   const moveGallery = (index, by) => {
     const items = [...form.gallery]
@@ -553,6 +555,7 @@ function WorkForm({ kind, work }) {
             library={library}
             onClose={() => setGalleryPicker(null)}
             onPick={(media) => {
+              setAddedMedia((prev) => [...prev, media])
               if (!form.gallery.some((item) => item.mediaId === media.id)) change({ gallery: [...form.gallery, { mediaId: media.id, caption: '' }] })
               setGalleryPicker(null)
             }}

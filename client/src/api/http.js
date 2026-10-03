@@ -50,6 +50,9 @@ export async function request(method, path, { query, body } = {}) {
     response = await fetch(`${BASE}${path}${queryString(query)}`, {
       method,
       headers,
+      // Admin data changes under you (the other admin, your own last save), so
+      // never answer from the browser's cache.
+      cache: admin ? 'no-store' : 'default',
       body: body === undefined ? undefined : JSON.stringify(body),
     })
   } catch {

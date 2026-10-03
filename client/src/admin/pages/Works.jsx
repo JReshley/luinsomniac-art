@@ -14,6 +14,7 @@ import {
   Notice,
   PAGE_SIZE,
   Pager,
+  RefreshStatus,
   SelectField,
   shownStatus,
   Skeleton,
@@ -46,10 +47,11 @@ export default function Works() {
 
   // Drafts include the old 'ready' status, so they're picked out here rather
   // than by the API's exact match.
-  const { data: found, error } = useApi(
+  const api = useApi(
     () => listWorks({ kind, status: status === 'draft' ? undefined : status, categoryId, attention, search }),
     [kind, status, categoryId, attention, search]
   )
+  const { data: found, error } = api
   const { data: categories } = useApi(listCategories, [])
 
   const compare = (SORTS.find(([value]) => value === sort) ?? SORTS[0])[2]
@@ -70,11 +72,17 @@ export default function Works() {
     setPage(1)
   }
 
+  // Whether a work belongs in the list as it's filtered now.
+  const fitsView = (work) => (status ? shownStatus(work.status) === status : work.status !== 'archived')
+
+  // Runs a status change, then shows its result in the list straight away:
+  // an archived work leaves the default view, a restored one leaves Archived.
   async function run(job, success) {
     setBusy(true)
     setNotice({ tone: 'info', text: '' })
     try {
-      await job()
+      const updated = await job()
+      if (updated?.id) api.setData((rows) => rows?.map((work) => (work.id === updated.id ? { ...work, status: updated.status } : work)).filter(fitsView))
       setNotice({ tone: 'info', text: success })
     } catch (err) {
       setNotice({ tone: 'error', text: err.message })
@@ -94,7 +102,7 @@ export default function Works() {
 
   return (
     <>
-      <AdminPageHeader title="Works" actions={<Button href={`/admin/works/new${kind ? `?kind=${kind}` : ''}`}>Add work</Button>}>
+      <AdminPageHeader title="Works" status={<RefreshStatus sources={[api]} />} actions={<Button href={`/admin/works/new${kind ? `?kind=${kind}` : ''}`}>Add work</Button>}>
         Every artwork, 3D model and video. Open one to edit it.
       </AdminPageHeader>
 

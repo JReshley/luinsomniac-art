@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import AdminPageHeader from '../AdminPageHeader.jsx'
 import { useSession } from '../auth.js'
-import { Button, LoadError, Skeleton } from '../ui.jsx'
+import { Button, LoadError, RefreshStatus, Skeleton } from '../ui.jsx'
 import { formatBytes, getDashboard, useApi } from '../../api/index.js'
 
 // The first page after signing in. The to-do list comes first, since that's
@@ -16,7 +16,8 @@ const ATTENTION_LIMIT = 6
 
 export default function Dashboard() {
   const session = useSession()
-  const { data, error } = useApi(getDashboard, [])
+  const api = useApi(getDashboard, [])
+  const { data, error } = api
 
   const actions = <Button href="/admin/works/new">Add work</Button>
 
@@ -39,7 +40,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <AdminPageHeader title={`Hi, ${session.name}`} actions={actions}>
+      <AdminPageHeader title={`Hi, ${session.name}`} actions={actions} status={<RefreshStatus sources={[api]} />}>
         {plural(total, 'work')} on file: {Object.entries(byKind).map(([kind, count]) => plural(count, KIND_LABELS[kind])).join(', ')}.
       </AdminPageHeader>
 
