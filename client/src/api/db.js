@@ -11,7 +11,8 @@
 // Field names are camelCase here and in what the API returns. The Postgres
 // columns are snake_case; Express does the mapping.
 
-import { getSession } from '../admin/auth.js'
+import { getSession } from '../admin/authMock.js'
+import { notify, subscribe } from './changes.js'
 import { buildSeed } from './seed.js'
 
 const KEY = 'luinsomniac-admin-db'
@@ -32,14 +33,8 @@ const LATENCY_MS = 120
 //   publish_blocked  the publish gate refused; `reasons` lists why
 //   in_use           can't remove something other records point at
 //   storage_full     the browser has no room left (mock only)
-export class ApiError extends Error {
-  constructor(code, message, details = {}) {
-    super(message)
-    this.name = 'ApiError'
-    this.code = code
-    Object.assign(this, details)
-  }
-}
+export { ApiError } from './errors.js'
+import { ApiError } from './errors.js'
 
 let db = load()
 
@@ -67,18 +62,10 @@ function persist(next) {
 }
 
 // --- Change notifications -------------------------------------------------
-// useApi() re-runs its call whenever the data changes, here or in another tab.
+// useApi() re-runs its call whenever the data changes (changes.js), here or in
+// another tab.
 
-const listeners = new Set()
-
-export function subscribe(listener) {
-  listeners.add(listener)
-  return () => listeners.delete(listener)
-}
-
-function notify() {
-  listeners.forEach((listener) => listener())
-}
+export { subscribe }
 
 window.addEventListener('storage', (event) => {
   if (event.key !== KEY) return

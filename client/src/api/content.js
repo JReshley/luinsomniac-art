@@ -12,6 +12,7 @@
 
 import { ApiError, findRow, logActivity, mutate, newId, query } from './db.js'
 import { resolveMediaUrls } from './media.js'
+import { SETTING_KEYS } from './shared.js'
 
 // --- Site text ------------------------------------------------------------
 
@@ -96,9 +97,6 @@ function validateLink(link) {
 
 // --- Settings -------------------------------------------------------------
 
-// The keys the Brand and Links screens edit. A null value or media means the
-// site uses the copy bundled in the repo (the logo in src/assets, and so on).
-export const SETTING_KEYS = ['contact_email', 'display_name', 'logo', 'icon', 'portrait']
 const IMAGE_SETTINGS = ['logo', 'icon', 'portrait']
 
 // { contact_email: { value, mediaId, media }, ... }

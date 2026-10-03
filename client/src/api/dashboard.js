@@ -3,10 +3,8 @@
 //   GET /api/admin/activity      listActivity(filters)
 
 import { query } from './db.js'
-import { KINDS, STATUSES, workProblems } from './works.js'
-
-// Supabase's free plan includes 1 GB of file storage.
-export const STORAGE_LIMIT_BYTES = 1024 ** 3
+import { STORAGE_LIMIT_BYTES, KINDS, STATUSES } from './shared.js'
+import { workProblems } from './works.js'
 
 // Newest first, each with `actorName`. Filters, all optional:
 //   limit      default 20

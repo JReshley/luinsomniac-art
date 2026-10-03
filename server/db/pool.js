@@ -21,10 +21,14 @@ const isLocal =
   process.env.DATABASE_URL.includes('localhost') ||
   process.env.DATABASE_URL.includes('127.0.0.1')
 
+// bigint columns (media.bytes) come back from pg as strings. Sizes here stay
+// far below 2^53, so numbers are safe and are what the screens expect.
+pg.types.setTypeParser(20, Number)
+
 export const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: isLocal ? false : { rejectUnauthorized: false },
-  max: 5,                          // free tiers allow far fewer than you think
+  max: Number(process.env.DB_POOL_MAX) || 5,  // free tiers allow far fewer than you think
   idleTimeoutMillis: 10_000,       // hand connections back quickly
   connectionTimeoutMillis: 5_000,  // fail fast rather than hanging the request
 })
@@ -34,3 +38,20 @@ export const pool = new pg.Pool({
 pool.on('error', (error) => {
   console.error('Unexpected database pool error:', error.message)
 })
+
+// Runs `work` with one connection inside BEGIN / COMMIT. If it throws, the
+// transaction is rolled back and nothing it wrote is kept.
+export async function transaction(work) {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const result = await work(client)
+    await client.query('COMMIT')
+    return result
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {})
+    throw error
+  } finally {
+    client.release()
+  }
+}

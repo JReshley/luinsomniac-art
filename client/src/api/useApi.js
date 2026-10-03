@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { subscribe } from './db.js'
+import { subscribe } from './changes.js'
 
 // Loads data from the API for a component:
 //

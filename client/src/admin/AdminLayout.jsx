@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, NavLink, Outlet, useLocation } from 'react-router-dom'
 import logoMark from '../assets/logo-mark.png'
-import { signOut, useSession } from './auth.js'
+import { signOut, useAuthReady, useSession } from './auth.js'
 
 // The signed-in admin: a sidebar of sections and the current page beside it.
 // It is also the protected-route check. Every page under it needs a session,
@@ -23,6 +23,7 @@ const SECTIONS = [
 
 export default function AdminLayout() {
   const session = useSession()
+  const ready = useAuthReady()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -34,6 +35,10 @@ export default function AdminLayout() {
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [menuOpen])
+
+  // The stored session is still being checked (a reload, with real sign-in).
+  // Sending an admin to the login page now would be wrong, then right back.
+  if (!ready) return null
 
   if (!session) {
     return <Navigate to="/admin/login" replace state={{ from: location }} />

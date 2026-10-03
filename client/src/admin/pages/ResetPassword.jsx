@@ -1,13 +1,17 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Button from '../../components/Button.jsx'
 import AuthCard, { Field } from '../AuthCard.jsx'
-import { requestPasswordReset } from '../auth.js'
+import { requestPasswordReset, updatePassword, useRecovery } from '../auth.js'
 
-// Where "Forgot password?" goes, and later where the reset email's link lands.
-// For now it only has the first half: asking for the email. Choosing a new
-// password needs Supabase's recovery link, so it comes with real auth.
+// Both halves of resetting a password. "Forgot password?" lands here to ask for
+// the email. The link in that email lands here too, signed in for the one job
+// of choosing a new password, and the page shows that form instead.
 export default function ResetPassword() {
+  return useRecovery() ? <ChoosePassword /> : <AskForLink />
+}
+
+function AskForLink() {
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
 
@@ -48,6 +52,44 @@ export default function ResetPassword() {
       <Link to="/admin/login" className="self-start text-caption text-primary underline-offset-2 hover:underline">
         ← Back to sign in
       </Link>
+    </AuthCard>
+  )
+}
+
+function ChoosePassword() {
+  const navigate = useNavigate()
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function handleSubmit(event) {
+    event.preventDefault()
+    setBusy(true)
+    setError('')
+    try {
+      await updatePassword(new FormData(event.currentTarget).get('password'))
+      navigate('/admin', { replace: true, viewTransition: false })
+    } catch (err) {
+      setError(err.message)
+      setBusy(false)
+    }
+  }
+
+  return (
+    <AuthCard title="Choose a new password">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2" noValidate>
+        <Field label="New password" id="password" name="password" type="password" autoComplete="new-password" minLength={8} required autoFocus />
+        <p className="-mt-1 text-small text-ink/65">At least 8 characters.</p>
+
+        {error && (
+          <p role="alert" className="rounded-sm bg-accent/15 px-1.5 py-1 text-caption text-ink">
+            {error}
+          </p>
+        )}
+
+        <Button type="submit" disabled={busy} className="mt-1">
+          {busy ? 'Saving…' : 'Save password'}
+        </Button>
+      </form>
     </AuthCard>
   )
 }

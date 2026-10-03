@@ -18,6 +18,7 @@
 import { ApiError, findRow, logActivity, mutate, newId, query } from './db.js'
 import { deleteBlob, getBlob, putBlob } from './blobs.js'
 import { compressImage, hashFile } from './images.js'
+import { formatBytes } from './shared.js'
 
 // Supabase's free plan caps one file at 50 MB.
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024
@@ -265,12 +266,4 @@ function row(ctx, fields) {
 
 function describeSource(source) {
   return { youtube: 'YouTube', gdrive: 'Google Drive', external: 'web' }[source] ?? source
-}
-
-// 32646 -> "32 KB", 1073741824 -> "1 GB".
-export function formatBytes(bytes) {
-  // parseFloat drops trailing zeros: "1.00" -> 1, "10.50" -> 10.5.
-  if (bytes >= 1024 ** 3) return `${parseFloat((bytes / 1024 ** 3).toFixed(2))} GB`
-  if (bytes >= 1024 ** 2) return `${parseFloat((bytes / 1024 ** 2).toFixed(1))} MB`
-  return `${Math.max(1, Math.round(bytes / 1024))} KB`
 }

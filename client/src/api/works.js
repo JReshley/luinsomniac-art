@@ -8,11 +8,9 @@
 // brought back (setWorkStatus(id, 'draft')).
 
 import { ApiError, findRow, logActivity, mutate, newId, query } from './db.js'
+import { KINDS, STATUSES, publishBlockers } from './shared.js'
 import { resolveMediaUrls } from './media.js'
 import { slugify } from './seed.js'
-
-export const KINDS = ['artwork', 'model', 'video']
-export const STATUSES = ['draft', 'ready', 'published', 'archived']
 
 // The fields a caller may set. Anything else in the input is ignored, the way
 // the Express route will only copy known columns.
@@ -24,17 +22,6 @@ const MODEL_FIELDS = ['software', 'processNotes', 'modelMediaId', 'turntableMedi
 const VIDEO_FIELDS = ['mediaId', 'duration', 'audioCleared', 'relatedWorkId']
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-
-// --- The publish gate -----------------------------------------------------
-// Why a work can't be published yet; empty when it can. Phase 4 makes the same
-// rule a CHECK constraint, so the database refuses it even if a screen or
-// route forgets to ask.
-export function publishBlockers(work) {
-  const reasons = []
-  if (!work.isOwnWork) reasons.push('It isn’t marked as Lui’s own work. Only own work can be published.')
-  if (work.showsRealFace && !work.faceConsent) reasons.push('It shows a real person’s face, and their consent isn’t recorded.')
-  return reasons
-}
 
 // What's missing or wrong on a work, for the dashboard's "Needs attention"
 // and the works list. Archived works are left alone.
