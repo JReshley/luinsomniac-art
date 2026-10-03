@@ -12,10 +12,11 @@ import { useSyncExternalStore } from 'react'
 
 const KEY = 'luinsomniac-admin-session'
 
-// The two admins from the plan. The real allowlist is the `admins` table.
-const ADMINS = {
-  john: 'John',
-  lui: 'Lui',
+// The two admins from the plan. The real allowlist is the `admins` table; the
+// ids match the mock database's admins (api/seed.js).
+export const ADMINS = {
+  john: { id: 'admin-john', name: 'John' },
+  lui: { id: 'admin-lui', name: 'Lui' },
 }
 
 function read() {
@@ -50,15 +51,24 @@ function write(value) {
   listeners.forEach((listener) => listener())
 }
 
-// The signed-in admin ({ email, name }), or null.
-export function useSession() {
-  const raw = useSyncExternalStore(subscribe, read)
+function parse(raw) {
   if (!raw) return null
   try {
     return JSON.parse(raw)
   } catch {
     return null
   }
+}
+
+// The signed-in admin ({ id, email, name }), or null.
+export function useSession() {
+  return parse(useSyncExternalStore(subscribe, read))
+}
+
+// The same outside React: the mock data layer uses it to stamp who made a
+// change. The real API gets that from the request's token instead.
+export function getSession() {
+  return parse(read())
 }
 
 // Resolves with the session, or rejects with a message fit to show the user.
@@ -68,10 +78,10 @@ export async function signIn(email, password) {
   const address = email.trim().toLowerCase()
   if (!address || !password) throw new Error('Enter your email and password.')
 
-  const name = ADMINS[address.split('@')[0]]
-  if (!name) throw new Error('That email and password don’t match an admin account.')
+  const admin = ADMINS[address.split('@')[0]]
+  if (!admin) throw new Error('That email and password don’t match an admin account.')
 
-  const session = { email: address, name }
+  const session = { ...admin, email: address }
   write(JSON.stringify(session))
   return session
 }
