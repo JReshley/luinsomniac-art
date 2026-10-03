@@ -46,6 +46,12 @@ function load() {
       // and everything already saved is kept.
       const fresh = buildSeed(VERSION)
       for (const table of Object.keys(fresh)) saved[table] ??= fresh[table]
+      // Works saved before they could have several categories, or an order
+      // on the home page.
+      saved.works.forEach((work, i) => {
+        work.categoryIds ??= work.categoryId ? [work.categoryId] : []
+        work.featuredOrder ??= i
+      })
       return saved
     }
   } catch {

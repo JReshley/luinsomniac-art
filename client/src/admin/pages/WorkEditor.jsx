@@ -136,19 +136,22 @@ function EditExisting({ id }) {
 
 const list = (text) => text.split(',').map((item) => item.trim()).filter(Boolean)
 
-// The category a new work starts in: the one last saved on a work, since works
-// tend to be added in batches of the same kind of thing.
+// The categories a new work starts in: the ones last saved on a work, since
+// works tend to be added in batches of the same kind of thing. (Older saves
+// kept a single id; it's read as a list of one.)
 const LAST_CATEGORY_KEY = 'luinsomniac-admin-last-category'
-function lastCategory() {
+function lastCategories() {
   try {
-    return localStorage.getItem(LAST_CATEGORY_KEY) ?? ''
+    const saved = localStorage.getItem(LAST_CATEGORY_KEY)
+    if (!saved) return []
+    return saved.startsWith('[') ? JSON.parse(saved) : [saved]
   } catch {
-    return ''
+    return []
   }
 }
-function rememberCategory(categoryId) {
+function rememberCategories(categoryIds) {
   try {
-    if (categoryId) localStorage.setItem(LAST_CATEGORY_KEY, categoryId)
+    if (categoryIds.length) localStorage.setItem(LAST_CATEGORY_KEY, JSON.stringify(categoryIds))
   } catch {
     // Storage blocked: new works just start with no category.
   }
@@ -181,7 +184,7 @@ function toForm(kind, work) {
   return {
     kind: work?.kind ?? kind,
     title: work?.title ?? '',
-    categoryId: work ? work.categoryId ?? '' : lastCategory(),
+    categoryIds: work ? work.categoryIds ?? (work.categoryId ? [work.categoryId] : []) : lastCategories(),
     year: work?.year == null ? '' : String(work.year),
     description: work?.description ?? '',
     tags: (work?.tags ?? []).join(', '),
@@ -221,7 +224,7 @@ function toInput(form) {
     kind,
     title: form.title,
     year: form.year.trim() === '' ? null : form.year,
-    categoryId: form.categoryId || null,
+    categoryIds: form.categoryIds,
     description: form.description,
     tags: list(form.tags),
     featured: form.featured,
@@ -277,7 +280,7 @@ function WorkForm({ kind, work }) {
   const { data: history = [] } = useApi(() => (work ? listActivity({ entity: 'work', entityId: work.id, limit: 5 }) : []), [work?.id])
 
   useEffect(() => {
-    if (form.kind === 'artwork' && in3dCategory(form.categoryId)) setForm((prev) => ({ ...prev, kind: 'model' }))
+    if (form.kind === 'artwork' && in3dCategory(form.categoryIds)) setForm((prev) => ({ ...prev, kind: 'model' }))
   }, [categories]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // --- Unsaved changes -------------------------------------------------------
@@ -298,11 +301,11 @@ function WorkForm({ kind, work }) {
 
   // --- Editing ---------------------------------------------------------------
   // A 3D category makes the work a 3D model, so its 3D fields show at once.
-  const in3dCategory = (categoryId) => is3dCategory(categories.find((category) => category.id === categoryId))
+  const in3dCategory = (categoryIds = []) => categoryIds.some((id) => is3dCategory(categories.find((category) => category.id === id)))
   const change = (patch) => {
     setForm((prev) => {
       const next = { ...prev, ...patch }
-      if (next.kind === 'artwork' && in3dCategory(next.categoryId)) next.kind = 'model'
+      if (next.kind === 'artwork' && in3dCategory(next.categoryIds)) next.kind = 'model'
       return next
     })
     if (patch.kind) validation.clear('kind')
@@ -363,7 +366,7 @@ function WorkForm({ kind, work }) {
     setBusy(true)
     try {
       const input = toInput(form)
-      rememberCategory(form.categoryId)
+      rememberCategories(form.categoryIds)
       if (isNew) {
         const created = await createWork(input)
         // Mark clean first so leaving for the new work's page isn't blocked.
@@ -447,8 +450,13 @@ function WorkForm({ kind, work }) {
   const type = form.kind
   const savedKind = JSON.parse(saved).kind
   const [coverLabel, coverHint] = COVER_COPY[type]
-  const categoryName = categories.find((category) => category.id === form.categoryId)?.name ?? ''
-  const forced3d = in3dCategory(form.categoryId)
+  // The 3D category that makes this a 3D model, if any, for the Type hint.
+  const categoryName = categories.find((category) => form.categoryIds.includes(category.id) && is3dCategory(category))?.name ?? ''
+  const forced3d = in3dCategory(form.categoryIds)
+  const toggleCategory = (id, on) => {
+    change({ categoryIds: on ? [...form.categoryIds, id] : form.categoryIds.filter((item) => item !== id) })
+    validation.clear('categoryIds')
+  }
   const savedStatus = JSON.parse(saved).status
   const saveLabel = isNew ? (form.status === 'published' ? 'Publish work' : 'Save draft') : 'Save changes'
 
@@ -497,15 +505,25 @@ function WorkForm({ kind, work }) {
             </Notice>
           )}
           <TextField label="Title" required autoFocus={isNew} {...field('title')} />
-          <div className="grid gap-2 md:grid-cols-[2fr_1fr]">
-            <SelectField label="Category" optional hint="The Museum filter it appears under." {...field('categoryId')}>
-              <option value="">None</option>
+          <fieldset className="flex flex-col gap-0.5">
+            <legend className="mb-0.5 text-caption font-medium">
+              Categories <span className="font-normal text-ink/65">(optional)</span>
+            </legend>
+            <p className="text-small text-ink/65">Pick any. It shows under each of them in the Museum; the first picked is shown on its card first.</p>
+            <div className="grid grid-cols-2 gap-x-2 md:grid-cols-3">
               {categories.map((category) => (
-                <option key={category.id} value={category.id}>{category.name}</option>
+                <Checkbox
+                  key={category.id}
+                  label={category.name}
+                  checked={form.categoryIds.includes(category.id)}
+                  onChange={(event) => toggleCategory(category.id, event.target.checked)}
+                />
               ))}
-            </SelectField>
-            <TextField label="Year" optional inputMode="numeric" maxLength={4} placeholder="2026" {...field('year')} />
-          </div>
+            </div>
+            {categories.length === 0 && <p className="text-caption text-ink/65">No categories yet. Add them on the Categories page.</p>}
+            <FieldError>{validation.errors.categoryIds}</FieldError>
+          </fieldset>
+          <TextField label="Year" optional className="md:max-w-[12rem]" inputMode="numeric" maxLength={4} placeholder="2026" {...field('year')} />
           <TextArea label="Description" optional rows={5} {...field('description')} />
         </Section>
 
@@ -640,7 +658,13 @@ function WorkForm({ kind, work }) {
             </fieldset>
           )}
 
-          <Checkbox label="Feature on the home page" hint="Only published works appear there." {...check('featured')} />
+          <Checkbox
+            label="Feature on the home page"
+            hint="Up to 9 works, in the order set under Site settings → Home page. Only published works appear there."
+            {...check('featured')}
+            onChange={(event) => { change({ featured: event.target.checked }); validation.clear('featured') }}
+          />
+          <FieldError>{validation.errors.featured}</FieldError>
         </Section>
 
         <Section title="Private notes">

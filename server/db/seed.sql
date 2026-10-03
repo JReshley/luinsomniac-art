@@ -12,7 +12,7 @@
 -- loaded before you run it. It leaves admins alone: those are the people who
 -- can sign in, and are added by hand.
 
-TRUNCATE TABLE activity_log, work_media, model_details, video_details, works, categories,
+TRUNCATE TABLE activity_log, work_media, work_categories, model_details, video_details, works, categories,
   site_text, social_links, experience, settings, media CASCADE;
 
 INSERT INTO categories (name, slug, sort_order) VALUES
@@ -95,6 +95,12 @@ INSERT INTO social_links (platform, handle, url, visible, sort_order) VALUES
   ('instagram', 'luinsomniac_art', 'https://www.instagram.com/luinsomniac_art', true, 0),
   ('tiktok', '@luinsomniac_art', 'https://www.tiktok.com/@luinsomniac_art', true, 1),
   ('vgen', 'Luinsomniac_Art', 'https://vgen.co/Luinsomniac_Art', true, 2);
+
+-- Each sample work is in its one category.
+INSERT INTO work_categories (work_id, category_id, position)
+SELECT id, category_id, 0 FROM works WHERE category_id IS NOT NULL;
+
+UPDATE works SET featured_order = sort_order;
 
 INSERT INTO experience (years, role, detail, sort_order) VALUES
   ('2025—now', 'Freelance 3D & 2D artist', 'Props, backgrounds, commissioned animation', 0),

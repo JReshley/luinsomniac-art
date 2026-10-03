@@ -4,7 +4,7 @@
 import { resetDatabase as resetTables } from './db.js'
 import { clearBlobs } from './blobs.js'
 
-export { listWorks, getWork, createWork, updateWork, setWorkStatus, archiveWork } from './works.js'
+export { listWorks, getWork, createWork, updateWork, setWorkStatus, archiveWork, setFeaturedWorks } from './works.js'
 export { addMediaLink, uploadMedia, listMedia, getMedia, updateMedia, deleteMedia } from './media.js'
 export { listCategories, createCategory, updateCategory, reorderCategories, deleteCategory } from './categories.js'
 export {

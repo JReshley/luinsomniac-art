@@ -13,6 +13,7 @@
 import { ApiError, query } from './db.js'
 import { resolveMediaUrls } from './media.js'
 import { is3dCategory } from './shared.js'
+import { categoriesOf, FEATURED_LIMIT } from './works.js'
 
 const publicMedia = (media) =>
   media
@@ -31,7 +32,7 @@ const publicMedia = (media) =>
 
 function publicWork(db, work) {
   const media = (id) => publicMedia(db.media.find((item) => item.id === id))
-  const category = db.categories.find((item) => item.id === work.categoryId)
+  const categories = categoriesOf(db, work).map((item) => ({ name: item.name, slug: item.slug }))
   const model = work.kind === 'model' && db.modelDetails.find((d) => d.workId === work.id)
   const video = work.kind === 'video' && db.videoDetails.find((d) => d.workId === work.id)
   const related = video?.relatedWorkId && db.works.find((item) => item.id === video.relatedWorkId && item.status === 'published')
@@ -41,7 +42,9 @@ function publicWork(db, work) {
     kind: shownKind(db, work),
     title: work.title,
     year: work.year,
-    category: category ? { name: category.name, slug: category.slug } : null,
+    categories,
+    // The first category, for anything that shows one.
+    category: categories[0] ?? null,
     description: work.description,
     tags: work.tags,
     featured: work.featured,
@@ -73,7 +76,7 @@ function publicWork(db, work) {
 // model (saved before that rule, or not saved since), so the 3D Showcase
 // lists it. It has no 3D details until it's saved again.
 const shownKind = (db, work) =>
-  work.kind === 'artwork' && is3dCategory(db.categories.find((item) => item.id === work.categoryId)) ? 'model' : work.kind
+  work.kind === 'artwork' && categoriesOf(db, work).some(is3dCategory) ? 'model' : work.kind
 
 const published = (db) => db.works.filter((work) => work.status === 'published').sort((a, b) => a.sortOrder - b.sortOrder)
 
@@ -82,7 +85,9 @@ export async function listPublishedWorks({ kind, category, featured } = {}) {
   const works = await query((db) => {
     const categoryId = category && db.categories.find((item) => item.slug === category)?.id
     return published(db)
-      .filter((work) => (!kind || shownKind(db, work) === kind) && (!category || work.categoryId === categoryId) && (!featured || work.featured))
+      .filter((work) => (!kind || shownKind(db, work) === kind) && (!category || work.categoryIds.includes(categoryId)) && (!featured || work.featured))
+      .sort((a, b) => (featured ? (a.featuredOrder ?? 0) - (b.featuredOrder ?? 0) : 0))
+      .slice(0, featured ? FEATURED_LIMIT : undefined)
       .map((work) => publicWork(db, work))
   })
   return resolveMediaUrls(works)
@@ -103,7 +108,7 @@ export function listPublicCategories() {
   return query((db) =>
     [...db.categories]
       .sort((a, b) => a.sortOrder - b.sortOrder)
-      .filter((category) => published(db).some((work) => work.categoryId === category.id))
+      .filter((category) => published(db).some((work) => work.categoryIds.includes(category.id)))
       .map((category) => ({ name: category.name, slug: category.slug }))
   )
 }

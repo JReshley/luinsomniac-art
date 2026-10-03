@@ -14,7 +14,7 @@ export function listCategories() {
   return query((db) =>
     [...db.categories]
       .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((category) => ({ ...category, workCount: db.works.filter((work) => work.categoryId === category.id).length }))
+      .map((category) => ({ ...category, workCount: db.works.filter((work) => (work.categoryIds ?? []).includes(category.id)).length }))
   )
 }
 
@@ -56,9 +56,9 @@ export function reorderCategories(ids) {
 export function deleteCategory(id) {
   return mutate((db, ctx) => {
     const category = findRow(db.categories, id, 'category')
-    const count = db.works.filter((work) => work.categoryId === id).length
+    const count = db.works.filter((work) => (work.categoryIds ?? []).includes(id)).length
     if (count) {
-      throw new ApiError('in_use', `${count} ${count === 1 ? 'work is' : 'works are'} still in “${category.name}”. Move ${count === 1 ? 'it' : 'them'} to another category first.`)
+      throw new ApiError('in_use', `${count} ${count === 1 ? 'work is' : 'works are'} still in “${category.name}”. Untick it on ${count === 1 ? 'that work' : 'those works'} first (filter the works list by this category to find them).`)
     }
     db.categories = db.categories.filter((item) => item.id !== id)
     logActivity(db, ctx, 'delete', 'category', id, `Removed the category “${category.name}”`)

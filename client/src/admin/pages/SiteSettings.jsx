@@ -8,10 +8,12 @@ import {
   getSettings,
   listExperience,
   listMedia,
+  listWorks,
   listSiteText,
   listSocialLinks,
   reorderExperience,
   reorderSocialLinks,
+  setFeaturedWorks,
   updateExperience,
   updateSettings,
   updateSiteText,
@@ -20,7 +22,7 @@ import {
 } from '../../api/index.js'
 import { DEFAULT_TEXT } from '../../data/siteText.js'
 import AdminPageHeader from '../AdminPageHeader.jsx'
-import { MediaField } from '../MediaPicker.jsx'
+import { MediaField, MediaThumb } from '../MediaPicker.jsx'
 import {
   Button,
   Checkbox,
@@ -35,6 +37,7 @@ import {
   readDraft,
   RefreshStatus,
   rules,
+  SelectField,
   Skeleton,
   TextArea,
   TextField,
@@ -106,6 +109,7 @@ export default function SiteSettings() {
             <Loaded api={settingsApi} also={textApi} what="home page settings">
               {(settings, entries) => <HomePageForm settings={settings} entries={entries} library={library} />}
             </Loaded>
+            <FeaturedWorks />
           </Section>
 
           <Section id="about-page" title="About page" description="Clear a text field to go back to the site’s original text.">
@@ -342,6 +346,104 @@ function HomePageForm({ settings, entries, library }) {
       {f.errorNotice}
       <SaveRow busy={f.busy} label="Save home page" state={f.state} dirty={f.dirty} />
     </form>
+  )
+}
+
+// The "Featured in the Museum" row on the home page: which published works,
+// in what order, up to FEATURED_LIMIT. Each change saves straight away, like
+// reordering categories. The checkbox in each work's editor is the same
+// setting, so the two always agree.
+const FEATURED_LIMIT = 9
+
+function FeaturedWorks() {
+  const api = useApi(() => listWorks({ status: 'published' }), [])
+  const { data: works, error } = api
+  const [toAdd, setToAdd] = useState('')
+  const [notice, setNotice] = useState({ tone: 'info', text: '' })
+
+  const featured = (works ?? []).filter((work) => work.featured).sort((a, b) => (a.featuredOrder ?? 0) - (b.featuredOrder ?? 0))
+  const others = (works ?? []).filter((work) => !work.featured).sort((a, b) => a.title.localeCompare(b.title))
+  const full = featured.length >= FEATURED_LIMIT
+
+  // Shows the new row at once, then saves it; put back if the save fails.
+  async function save(ids, message) {
+    api.setData((rows) => rows?.map((work) => ({ ...work, featured: ids.includes(work.id), featuredOrder: ids.includes(work.id) ? ids.indexOf(work.id) : work.featuredOrder })))
+    try {
+      await setFeaturedWorks(ids)
+      setNotice({ tone: 'info', text: message })
+    } catch (err) {
+      api.reload()
+      setNotice({ tone: 'error', text: err.message })
+    }
+  }
+
+  const ids = featured.map((work) => work.id)
+  const move = (index, by) => {
+    const next = [...ids]
+    ;[next[index], next[index + by]] = [next[index + by], next[index]]
+    save(next, 'Saved the new order.')
+  }
+
+  function add(event) {
+    event.preventDefault()
+    const work = others.find((item) => item.id === toAdd)
+    if (!work) return setNotice({ tone: 'error', text: 'Pick a work to add first.' })
+    setToAdd('')
+    save([...ids, work.id], `Added “${work.title}”.`)
+  }
+
+  return (
+    <div className="flex flex-col gap-1 rounded-lg border border-ink/10 bg-surface p-2">
+      <div className="flex flex-wrap items-baseline gap-x-2">
+        <h3 className="leading-[1.25] font-bold">Featured works</h3>
+        {works && <span className="text-caption text-ink/65">{featured.length} of {FEATURED_LIMIT}</span>}
+        <RefreshStatus sources={[api]} />
+      </div>
+      <p className="text-caption text-ink/65">The “Featured in the Museum” row, in this order. Only published works can be featured. Changes save straight away.</p>
+      <Notice tone={notice.tone}>{notice.text}</Notice>
+      {!works && (error ? <LoadError what="featured works" error={error} /> : <Skeleton rows={3} />)}
+      {works && featured.length === 0 && (
+        <EmptyState title="Nothing is featured yet.">The row is hidden on the home page until there’s at least one. Add a work below.</EmptyState>
+      )}
+      {featured.length > 0 && (
+        <ol className="flex flex-col divide-y divide-ink/10 rounded-sm border border-ink/10">
+          {featured.map((work, index) => (
+            <li key={work.id} className="flex flex-col gap-1 p-1.5 md:flex-row md:items-center md:gap-2">
+              <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                <span className="w-2 shrink-0 text-center font-mono text-small text-ink/65">{index + 1}</span>
+                <MediaThumb media={work.cover} className="size-6" />
+                <span className="flex min-w-0 flex-col">
+                  <span className="truncate font-medium">{work.title}</span>
+                  <span className="text-caption text-ink/65">{work.categories?.map((category) => category.name).join(', ') || 'No category'}</span>
+                </span>
+              </span>
+              <span className="flex gap-1 md:shrink-0">
+                <LinkButton disabled={index === 0} onClick={() => move(index, -1)} aria-label={`Move ${work.title} up`}>Move up</LinkButton>
+                <LinkButton disabled={index === featured.length - 1} onClick={() => move(index, 1)} aria-label={`Move ${work.title} down`}>Move down</LinkButton>
+                <LinkButton onClick={() => save(ids.filter((id) => id !== work.id), `Removed “${work.title}” from the home page. The work itself is unchanged.`)} aria-label={`Remove ${work.title} from featured works`}>
+                  Remove
+                </LinkButton>
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+      {works && (
+        full ? (
+          <p className="text-caption text-ink/65">The row is full. Remove a work to add another.</p>
+        ) : (
+          <form onSubmit={add} noValidate className="flex flex-wrap items-start gap-1">
+            <SelectField label="Add a work" className="min-w-[14rem] flex-1" value={toAdd} onChange={(event) => { setToAdd(event.target.value); setNotice({ tone: 'info', text: '' }) }}>
+              <option value="">{others.length ? 'Choose a published work' : 'Every published work is featured'}</option>
+              {others.map((work) => (
+                <option key={work.id} value={work.id}>{work.title}</option>
+              ))}
+            </SelectField>
+            <Button type="submit" className="mt-[1.65rem]">Add to featured</Button>
+          </form>
+        )
+      )}
+    </div>
   )
 }
 

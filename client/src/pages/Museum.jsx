@@ -31,7 +31,7 @@ export default function Museum() {
   // Index into `shown` of the work in the Lightbox, or null when it is closed.
   const [openIndex, setOpenIndex] = useState(null)
 
-  const matching = filter === ALL ? sorted : sorted.filter((work) => work.category === filter)
+  const matching = filter === ALL ? sorted : sorted.filter((work) => work.categories.includes(filter))
   const shown = matching.slice(0, visibleCount)
 
   function changeFilter(next) {

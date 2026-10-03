@@ -17,6 +17,8 @@ export const updateWork = (id, changes) => request('PATCH', `/api/admin/works/${
 export const setWorkStatus = (id, status) => updateWork(id, { status })
 // What the admin calls "Delete".
 export const archiveWork = (id) => setWorkStatus(id, 'archived')
+// The home page's featured works, in order (up to 9, published only).
+export const setFeaturedWorks = (ids) => request('PUT', '/api/admin/works/featured', { body: { ids } })
 
 // --- Media ------------------------------------------------------------------
 

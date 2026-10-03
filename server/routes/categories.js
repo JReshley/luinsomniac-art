@@ -19,7 +19,7 @@ export function categoryRoutes() {
     response.json(
       db.categories
         .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((category) => ({ ...category, workCount: db.works.filter((work) => work.categoryId === category.id).length }))
+        .map((category) => ({ ...category, workCount: db.works.filter((work) => work.categoryIds.includes(category.id)).length }))
     )
   }))
 
@@ -73,9 +73,9 @@ export function categoryRoutes() {
       const db = await loadDb(client, ['categories', 'works'])
       const category = db.categories.find((item) => item.id === request.params.id)
       if (!category) throw notFound()
-      const count = db.works.filter((work) => work.categoryId === category.id).length
+      const count = db.works.filter((work) => work.categoryIds.includes(category.id)).length
       if (count) {
-        throw new ApiError('in_use', `${count} ${count === 1 ? 'work is' : 'works are'} still in “${category.name}”. Move ${count === 1 ? 'it' : 'them'} to another category first.`)
+        throw new ApiError('in_use', `${count} ${count === 1 ? 'work is' : 'works are'} still in “${category.name}”. Untick it on ${count === 1 ? 'that work' : 'those works'} first (filter the works list by this category to find them).`)
       }
       await client.query('DELETE FROM categories WHERE id = $1', [category.id])
       await logActivity(client, request.admin.id, 'delete', 'category', category.id, `Removed the category “${category.name}”`)

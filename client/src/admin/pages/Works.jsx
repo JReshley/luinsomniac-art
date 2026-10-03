@@ -150,7 +150,7 @@ export default function Works() {
                       <span className="truncate font-medium text-primary underline-offset-2 group-hover:underline">{work.title}</span>
                       <span className="text-caption text-ink/65">
                         {KIND_LABELS[work.kind]}
-                        {work.category && ` · ${work.category.name}`}
+                        {work.categories?.length > 0 && ` · ${work.categories.map((category) => category.name).join(', ')}`}
                         {work.year && ` · ${work.year}`}
                       </span>
                       {work.problems.length > 0 && (

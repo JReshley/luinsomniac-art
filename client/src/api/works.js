@@ -15,9 +15,27 @@ import { slugify } from './seed.js'
 // The fields a caller may set. Anything else in the input is ignored, the way
 // the Express route will only copy known columns.
 const WORK_FIELDS = [
-  'slug', 'title', 'year', 'categoryId', 'description', 'tags', 'coverMediaId', 'featured',
+  'slug', 'title', 'year', 'categoryId', 'categoryIds', 'description', 'tags', 'coverMediaId', 'featured',
   'sortOrder', 'status', 'isOwnWork', 'showsRealFace', 'faceConsent', 'notesArtist', 'notesAdmin',
 ]
+// The home page shows up to this many featured works, in featuredOrder.
+export const FEATURED_LIMIT = 9
+
+// After a save: an archived work stops being featured, and a work newly
+// marked featured goes to the end of the home page's row, if there's room.
+export function placeFeatured(db, work, wasFeatured) {
+  if (work.status === 'archived') work.featured = false
+  if (!work.featured || wasFeatured) return
+  const others = db.works.filter((other) => other.id !== work.id && other.featured && other.status !== 'archived')
+  if (others.length >= FEATURED_LIMIT) {
+    invalid('featured', `The home page already shows ${FEATURED_LIMIT} featured works. Remove one under Site settings → Home page first.`)
+  }
+  work.featuredOrder = Math.max(-1, ...others.map((other) => other.featuredOrder ?? 0)) + 1
+}
+
+// The categories a work is in, in its order, as rows.
+export const categoriesOf = (db, work) => (work.categoryIds ?? []).map((id) => db.categories.find((category) => category.id === id)).filter(Boolean)
+
 const MODEL_FIELDS = ['software', 'processNotes', 'modelMediaId', 'turntableMediaId', 'polyCount', 'textured', 'externalUrl']
 const VIDEO_FIELDS = ['mediaId', 'duration', 'audioCleared', 'relatedWorkId']
 
@@ -33,8 +51,7 @@ export function workProblems(db, work) {
   if (!work.coverMediaId) add('No cover image')
   // Saved as an artwork before 3D categories made works 3D models: the 3D
   // Showcase lists it, but it has no 3D details until it's saved again.
-  const category = db.categories?.find((item) => item.id === work.categoryId)
-  if (work.kind === 'artwork' && is3dCategory(category)) add('In a 3D category: open and save it to add its 3D details')
+  if (work.kind === 'artwork' && db.categories && categoriesOf(db, work).some(is3dCategory)) add('In a 3D category: open and save it to add its 3D details')
   if (work.kind === 'model' && !db.modelDetails.find((d) => d.workId === work.id)?.modelMediaId) add('No .glb file')
   if (work.kind === 'video' && !db.videoDetails.find((d) => d.workId === work.id)?.mediaId) add('No YouTube link')
 
@@ -51,7 +68,9 @@ function present(db, work) {
   const media = (id) => db.media.find((item) => item.id === id) ?? null
   return {
     ...work,
-    category: db.categories.find((category) => category.id === work.categoryId) ?? null,
+    categories: categoriesOf(db, work),
+    // The first category, for screens that show one.
+    category: categoriesOf(db, work)[0] ?? null,
     cover: media(work.coverMediaId),
     gallery: db.workMedia
       .filter((link) => link.workId === work.id)
@@ -80,7 +99,7 @@ export async function listWorks({ kind, status, categoryId, search, attention } 
     db.works
       .filter((work) => (status ? work.status === status : work.status !== 'archived'))
       .filter((work) => !kind || work.kind === kind)
-      .filter((work) => !categoryId || work.categoryId === categoryId)
+      .filter((work) => !categoryId || (work.categoryIds ?? []).includes(categoryId))
       .filter((work) => !term || [work.title, work.slug, ...work.tags].some((text) => text.toLowerCase().includes(term)))
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((work) => present(db, work))
@@ -114,6 +133,8 @@ export async function createWork(input) {
       tags: [],
       coverMediaId: null,
       featured: false,
+      featuredOrder: 0,
+      categoryIds: [],
       sortOrder: Math.max(-1, ...db.works.map((row) => row.sortOrder)) + 1,
       status: 'draft',
       isOwnWork: true,
@@ -127,9 +148,11 @@ export async function createWork(input) {
       ...pick(input, WORK_FIELDS),
     }
     if (!input.slug?.trim()) work.slug = uniqueSlug(db, slugify(work.title ?? ''), work.id)
-    if (work.kind === 'artwork' && is3dCategory(db.categories.find((item) => item.id === work.categoryId))) work.kind = 'model'
+    if (!Array.isArray(work.categoryIds)) work.categoryIds = work.categoryId ? [work.categoryId] : []
+    if (work.kind === 'artwork' && categoriesOf(db, work).some(is3dCategory)) work.kind = 'model'
 
     validateWork(db, work)
+    placeFeatured(db, work, false)
     db.works.push(work)
 
     if (work.kind === 'model') {
@@ -159,8 +182,8 @@ export async function updateWork(id, changes) {
 
     // The type asked for, unless the category makes it a 3D model.
     let nextKind = changes.kind ?? work.kind
-    const nextCategoryId = changes.categoryId !== undefined ? changes.categoryId : work.categoryId
-    if (nextKind === 'artwork' && is3dCategory(db.categories.find((item) => item.id === nextCategoryId))) nextKind = 'model'
+    const nextCategoryIds = changes.categoryIds ?? (changes.categoryId !== undefined ? [changes.categoryId] : work.categoryIds) ?? []
+    if (nextKind === 'artwork' && categoriesOf(db, { categoryIds: nextCategoryIds }).some(is3dCategory)) nextKind = 'model'
     if (nextKind !== work.kind) {
       if (!KINDS.includes(nextKind)) throw new ApiError('invalid', 'Pick a type: artwork, 3D model or video.', { field: 'kind' })
       db.modelDetails = db.modelDetails.filter((d) => d.workId !== id)
@@ -172,6 +195,7 @@ export async function updateWork(id, changes) {
 
     Object.assign(work, pick(changes, WORK_FIELDS), { updatedAt: ctx.now, updatedBy: ctx.actorId })
     validateWork(db, work)
+    placeFeatured(db, work, before.featured && before.status !== 'archived')
 
     if (changes.model && work.kind === 'model') {
       const details = db.modelDetails.find((d) => d.workId === id)
@@ -189,6 +213,25 @@ export async function updateWork(id, changes) {
 }
 
 export const setWorkStatus = (id, status) => updateWork(id, { status })
+
+// The home page's featured works, in order: these ids are featured (up to
+// FEATURED_LIMIT, published only) and every other work isn't.
+export function setFeaturedWorks(ids) {
+  return mutate((db, ctx) => {
+    const list = [...new Set(ids ?? [])]
+    if (list.length > FEATURED_LIMIT) throw new ApiError('invalid', `The home page shows up to ${FEATURED_LIMIT} featured works.`)
+    for (const id of list) {
+      const work = findRow(db.works, id, 'work')
+      if (work.status !== 'published') throw new ApiError('invalid', `Publish “${work.title}” before featuring it; only published works show on the home page.`)
+    }
+    for (const work of db.works) {
+      const index = list.indexOf(work.id)
+      work.featured = index !== -1
+      if (index !== -1) work.featuredOrder = index
+    }
+    logActivity(db, ctx, 'update', 'work', null, 'Changed the featured works')
+  })
+}
 
 // What the admin calls "Delete".
 export const archiveWork = (id) => setWorkStatus(id, 'archived')
@@ -229,7 +272,12 @@ function validateWork(db, work) {
     work.year = null
   }
 
-  if (work.categoryId && !db.categories.some((category) => category.id === work.categoryId)) invalid('categoryId', 'That category no longer exists. Pick another.')
+  // Any number of categories, each once, in the order picked. categoryId
+  // keeps the first, for anything that still reads one.
+  if (!Array.isArray(work.categoryIds)) work.categoryIds = work.categoryId ? [work.categoryId] : []
+  work.categoryIds = [...new Set(work.categoryIds.filter(Boolean))]
+  if (work.categoryIds.some((id) => !db.categories.some((category) => category.id === id))) invalid('categoryIds', 'One of those categories no longer exists. Pick again.')
+  work.categoryId = work.categoryIds[0] ?? null
   if (work.coverMediaId && !db.media.some((media) => media.id === work.coverMediaId)) invalid('coverMediaId', 'That cover image no longer exists. Pick another.')
   if (!STATUSES.includes(work.status)) invalid('status', 'Pick a status: draft, ready, published or archived.')
 

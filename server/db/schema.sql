@@ -159,6 +159,31 @@ CREATE TABLE IF NOT EXISTS works (
 
 CREATE INDEX IF NOT EXISTS works_status_sort_idx ON works (status, sort_order);
 CREATE INDEX IF NOT EXISTS works_category_idx    ON works (category_id);
+
+-- A work's categories: any number, in order. works.category_id keeps the first
+-- one (the API writes both), for anything that still reads a single category.
+CREATE TABLE IF NOT EXISTS work_categories (
+  work_id     UUID    NOT NULL REFERENCES works (id) ON DELETE CASCADE,
+  category_id UUID    NOT NULL REFERENCES categories (id) ON DELETE RESTRICT,
+  position    INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (work_id, category_id)
+);
+CREATE INDEX IF NOT EXISTS work_categories_category_idx ON work_categories (category_id);
+
+-- Works from before a work could have several categories bring their one.
+INSERT INTO work_categories (work_id, category_id, position)
+SELECT id, category_id, 0 FROM works
+WHERE category_id IS NOT NULL
+ON CONFLICT DO NOTHING;
+
+-- The home page's featured works are shown in featured_order. Added after the
+-- table was made; existing featured works keep their old order.
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'works' AND column_name = 'featured_order') THEN
+    ALTER TABLE works ADD COLUMN featured_order INTEGER NOT NULL DEFAULT 0;
+    UPDATE works SET featured_order = sort_order;
+  END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS works_cover_idx       ON works (cover_media_id);
 
 -- updated_at is set by the database, so it can't be forgotten or faked.
@@ -366,7 +391,10 @@ CREATE INDEX IF NOT EXISTS activity_log_entity_idx     ON activity_log (entity, 
 -- nothing once the rows agree.
 UPDATE works SET kind = 'model'
 WHERE kind = 'artwork'
-  AND category_id IN (SELECT id FROM categories WHERE (name || ' ' || slug) ~* '(^|[^a-z0-9])3d([^a-z0-9]|$)');
+  AND id IN (
+    SELECT wc.work_id FROM work_categories wc JOIN categories c ON c.id = wc.category_id
+    WHERE (c.name || ' ' || c.slug) ~* '(^|[^a-z0-9])3d([^a-z0-9]|$)'
+  );
 
 INSERT INTO model_details (work_id)
 SELECT id FROM works
@@ -389,5 +417,6 @@ ALTER TABLE work_media    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE site_text     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE social_links  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE experience    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE work_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_log  ENABLE ROW LEVEL SECURITY;

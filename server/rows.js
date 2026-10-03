@@ -36,6 +36,11 @@ export async function loadDb(db, names) {
   // query at a time.
   const loaded = {}
   for (const name of names) loaded[name] = await all(db, TABLES[name])
+  // A work's categories live in work_categories; they come with the work.
+  if (loaded.works) {
+    const { rows } = await db.query('SELECT work_id, category_id FROM work_categories ORDER BY position')
+    for (const work of loaded.works) work.categoryIds = rows.filter((row) => row.work_id === work.id).map((row) => row.category_id)
+  }
   return loaded
 }
 
