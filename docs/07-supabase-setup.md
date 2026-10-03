@@ -84,7 +84,9 @@ there is no CORS to configure.
    | `SUPABASE_URL` | the project URL |
    | `SUPABASE_SERVICE_ROLE_KEY` | the service_role / secret key |
    | `SUPABASE_BUCKET` | `media` |
-   | `NODE_ENV` | `production` |
+
+   Don't add `NODE_ENV`: Vercel sets it, and setting it yourself makes the
+   install skip Vite, so the build fails with "exited with 127".
 
    `VITE_*` values are baked into the public site; the others stay on the
    server. Only the anon key goes in a `VITE_` variable.
@@ -112,6 +114,8 @@ set `VITE_API_BASE_URL` to its address.
   site's origin isn't in `CORS_ORIGINS` there (no trailing slash).
 - **`/api/...` returns the site's home page or a 404 on Vercel** — Root
   Directory is still `client`, so the root `vercel.json` and `api/` are ignored.
+- **Build fails with "exited with 127"** — a `NODE_ENV=production` variable is
+  set in Vercel. Delete it.
 - **Uploads fail** — the bucket isn't named `media`, or `SUPABASE_BUCKET` is set
   to something else.
 - **Password-reset link goes to the wrong page** — the redirect URL isn't in
