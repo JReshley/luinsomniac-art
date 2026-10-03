@@ -81,6 +81,9 @@
 @layer base {
   body {
     @apply bg-bg font-sans text-body text-ink antialiased;
+    /* Cards swing in rotated (.hang-in) and briefly poke past the edge; clip,
+       unlike hidden, leaves the sticky header and panels working. */
+    overflow-x: clip;
   }
 
   /* Every page's <main> is at least one screen tall, so the footer starts

@@ -19,7 +19,19 @@ const KIND_COPY = {
   image: { noun: 'image', accept: 'image/png,image/jpeg,image/webp,image/gif', canUpload: true, canLink: true, linkHint: 'A Google Drive file or a link to an image.' },
   model: { noun: '3D model', accept: '.glb', canUpload: true, canLink: false },
   video: { noun: 'video', canUpload: false, canLink: true, linkHint: 'The link from Share on the video’s YouTube page.' },
+  // A 3D model's turntable: a YouTube video or an animated image.
+  turntable: {
+    noun: 'turntable',
+    kinds: ['image', 'video'],
+    accept: 'image/gif,image/webp,image/png,image/jpeg',
+    canUpload: true,
+    canLink: true,
+    linkHint: 'A YouTube link, or a Drive or web link to a GIF or WebP.',
+  },
 }
+
+// The kinds of file a field takes: one, or a turntable's two.
+const kindsOf = (kind) => KIND_COPY[kind]?.kinds ?? [kind]
 
 // A preview square: the picture if there is one, else a labelled tile.
 export function MediaThumb({ media, className = 'size-8' }) {
@@ -139,7 +151,7 @@ function AltTextInput({ media }) {
 
 export function MediaPicker({ open, kind, library, selectedId, onClose, onPick }) {
   const copy = KIND_COPY[kind]
-  const items = library.filter((item) => item.kind === kind)
+  const items = library.filter((item) => kindsOf(kind).includes(item.kind))
 
   return (
     <Dialog open={open} onClose={onClose} title={`Choose ${/^[aeiou]/i.test(copy.noun) ? 'an' : 'a'} ${copy.noun}`} side>
@@ -193,7 +205,7 @@ export function AddMedia({ kind, onAdded, heading = 'Add new' }) {
     setMessage({ tone: 'info', text: '' })
     try {
       const media = await job()
-      if (kind && media.kind !== kind) {
+      if (kind && !kindsOf(kind).includes(media.kind)) {
         setMessage({ tone: 'error', text: `That’s ${/^[aeiou]/i.test(media.kind) ? 'an' : 'a'} ${media.kind === 'model' ? '3D model' : media.kind}, and this needs ${/^[aeiou]/i.test(copy.noun) ? 'an' : 'a'} ${copy.noun}.` })
         return
       }

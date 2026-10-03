@@ -32,6 +32,17 @@ export function experienceProblem(row) {
 // 3D Showcase lists them, so a 3D piece can't be left out of it.
 export const is3dCategory = (category) => /(^|[^a-z0-9])3d([^a-z0-9]|$)/i.test(`${category?.name ?? ''} ${category?.slug ?? ''}`)
 
+// The render passes a 3D model's gallery images can be labelled with, as in
+// the Showcase wireframe's thumbnails. Stored by key; '' means none.
+export const PASSES = [
+  ['beauty', 'Beauty'],
+  ['wireframe', 'Wireframe'],
+  ['uv', 'UV / Texture'],
+  ['clay', 'Clay'],
+  ['other', 'Other'],
+]
+export const passLabel = (key) => PASSES.find(([value]) => value === key)?.[1] ?? ''
+
 // Supabase's free plan includes 1 GB of file storage.
 export const STORAGE_LIMIT_BYTES = 1024 ** 3
 

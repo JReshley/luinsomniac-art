@@ -8,7 +8,9 @@
 // brought back (setWorkStatus(id, 'draft')).
 
 import { ApiError, findRow, logActivity, mutate, newId, query } from './db.js'
-import { is3dCategory, KINDS, STATUSES, publishBlockers } from './shared.js'
+import { is3dCategory, KINDS, PASSES, STATUSES, publishBlockers } from './shared.js'
+
+const PASS_KEYS = PASSES.map(([key]) => key)
 import { resolveMediaUrls } from './media.js'
 import { slugify } from './seed.js'
 
@@ -36,7 +38,7 @@ export function placeFeatured(db, work, wasFeatured) {
 // The categories a work is in, in its order, as rows.
 export const categoriesOf = (db, work) => (work.categoryIds ?? []).map((id) => db.categories.find((category) => category.id === id)).filter(Boolean)
 
-const MODEL_FIELDS = ['software', 'processNotes', 'modelMediaId', 'turntableMediaId', 'polyCount', 'textured', 'externalUrl']
+const MODEL_FIELDS = ['client', 'role', 'software', 'processNotes', 'modelMediaId', 'turntableMediaId', 'polyCount', 'textured', 'externalUrl']
 const VIDEO_FIELDS = ['mediaId', 'duration', 'audioCleared', 'relatedWorkId']
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
@@ -77,7 +79,7 @@ function present(db, work) {
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((link) => {
         const item = media(link.mediaId)
-        return item && { ...item, caption: link.caption ?? '' }
+        return item && { ...item, caption: link.caption ?? '', pass: link.pass ?? '' }
       })
       .filter(Boolean),
     model: work.kind === 'model' ? db.modelDetails.find((d) => d.workId === work.id) ?? null : null,
@@ -156,7 +158,7 @@ export async function createWork(input) {
     db.works.push(work)
 
     if (work.kind === 'model') {
-      const details = { workId: work.id, software: [], processNotes: '', modelMediaId: null, turntableMediaId: null, polyCount: null, textured: false, externalUrl: null }
+      const details = { workId: work.id, client: '', role: '', software: [], processNotes: '', modelMediaId: null, turntableMediaId: null, polyCount: null, textured: false, externalUrl: null }
       db.modelDetails.push(Object.assign(details, pick(input.model ?? {}, MODEL_FIELDS)))
       validateModel(db, details)
     }
@@ -189,7 +191,7 @@ export async function updateWork(id, changes) {
       db.modelDetails = db.modelDetails.filter((d) => d.workId !== id)
       db.videoDetails = db.videoDetails.filter((d) => d.workId !== id)
       work.kind = nextKind
-      if (work.kind === 'model') db.modelDetails.push({ workId: id, software: [], processNotes: '', modelMediaId: null, turntableMediaId: null, polyCount: null, textured: false, externalUrl: null })
+      if (work.kind === 'model') db.modelDetails.push({ workId: id, client: '', role: '', software: [], processNotes: '', modelMediaId: null, turntableMediaId: null, polyCount: null, textured: false, externalUrl: null })
       if (work.kind === 'video') db.videoDetails.push({ workId: id, mediaId: null, duration: null, audioCleared: false, relatedWorkId: null })
     }
 
@@ -307,6 +309,16 @@ function validateModel(db, details) {
   } else {
     details.polyCount = null
   }
+  // Who it was for and what Lui did on it, as the Showcase's spec rows.
+  for (const field of ['client', 'role']) {
+    details[field] = String(details[field] ?? '').trim()
+    if (details[field].length > 80) invalid(field, 'Keep it under 80 characters.')
+  }
+  // A turntable is a YouTube video or an animated image.
+  const turntable = db.media.find((media) => media.id === details.turntableMediaId)
+  if (turntable && !(turntable.kind === 'image' || turntable.source === 'youtube')) {
+    invalid('turntableMediaId', 'A turntable is a YouTube video or an animated image (GIF or WebP).')
+  }
   details.textured = Boolean(details.textured)
   if (details.externalUrl && !/^https:\/\//.test(details.externalUrl)) invalid('externalUrl', 'Links need to start with https://')
   details.externalUrl ||= null
@@ -332,13 +344,14 @@ function validateVideo(db, details) {
 function setGallery(db, workId, items) {
   const seen = new Set()
   const rows = []
-  for (const { mediaId, caption } of items) {
+  for (const { mediaId, caption, pass } of items) {
     const media = db.media.find((item) => item.id === mediaId)
     if (!media) invalid('gallery', 'One of the gallery files no longer exists.')
     if (media.kind === 'model') invalid('gallery', 'The gallery takes images and videos. A 3D model goes in the model field.')
     const text = String(caption ?? '').trim()
     if (text.length > 200) invalid('gallery', 'Keep each caption under 200 characters.')
-    if (!seen.has(mediaId)) rows.push({ workId, mediaId, caption: text, sortOrder: rows.length })
+    const passKey = PASS_KEYS.includes(pass) ? pass : ''
+    if (!seen.has(mediaId)) rows.push({ workId, mediaId, caption: text, pass: passKey, sortOrder: rows.length })
     seen.add(mediaId)
   }
   db.workMedia = db.workMedia.filter((link) => link.workId !== workId).concat(rows)

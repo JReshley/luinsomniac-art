@@ -12,14 +12,17 @@ export default function ModelStage({ model }) {
   // The 3D view needs a .glb. Without one it's left out, unless there's
   // nothing else to show, when it stands in with "on its way".
   const hasOthers = Boolean(model.turntableUrl || model.posterUrl || model.gallery.length)
+  // The turntable leads, as in the wireframe; then the .glb to spin, the
+  // poster, and the gallery's passes.
   const views = [
+    model.turntableUrl && { id: 'turntable', label: 'Turntable', thumb: model.turntableThumb, video: model.turntableVideo },
     (model.modelUrl || !hasOthers) && { id: 'model', label: '3D model' },
-    model.turntableUrl && { id: 'turntable', label: 'Turntable', thumb: model.turntableUrl },
     model.posterUrl && { id: 'poster', label: 'Poster', thumb: model.posterUrl },
     ...model.gallery.map((item, index) => ({
       id: `gallery-${index}`,
       item,
-      label: item.caption || item.alt || `${item.kind === 'video' ? 'Video' : 'Image'} ${index + 1}`,
+      label: item.pass || item.caption || item.alt || `${item.kind === 'video' ? 'Video' : 'Image'} ${index + 1}`,
+      pass: item.pass,
       thumb: item.thumbnailUrl,
     })),
   ].filter(Boolean)
@@ -64,7 +67,12 @@ export default function ModelStage({ model }) {
                 {view.thumb ? (
                   <span className="relative block size-full">
                     <img src={view.thumb} alt="" loading="lazy" className="size-full object-cover" />
-                    {view.item?.kind === 'video' && (
+                    {(view.pass || view.id === 'turntable') && (
+                      <span aria-hidden="true" className="absolute inset-x-0 bottom-0 bg-ink/70 px-0.5 py-0.5 text-center text-bg">
+                        {view.pass || 'Turntable'}
+                      </span>
+                    )}
+                    {(view.item?.kind === 'video' || view.video) && (
                       <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
                         <span className="flex h-3 w-4 items-center justify-center rounded-sm bg-ink/70 text-small text-bg">▶</span>
                       </span>
@@ -98,6 +106,18 @@ function View({ model, view }) {
 
   if (view.item) {
     return <img src={view.item.url} alt={view.item.alt || view.item.caption} className="size-full object-contain" />
+  }
+
+  if (view.id === 'turntable' && model.turntableVideo) {
+    return (
+      <iframe
+        src={`https://www.youtube-nocookie.com/embed/${youtubeId(model.turntableUrl)}`}
+        title={`Turntable of ${model.title}`}
+        allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+        allowFullScreen
+        className="size-full border-0 bg-ink"
+      />
+    )
   }
 
   if (view.id === 'turntable') {

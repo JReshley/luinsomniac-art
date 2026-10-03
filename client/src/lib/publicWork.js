@@ -1,3 +1,5 @@
+import { passLabel } from '../api/shared.js'
+
 // Turns what the public API sends (api/public.js) into the shapes the public
 // pages' components were built around, so the cards, Lightbox and showcase
 // don't each pick the API's response apart.
@@ -54,7 +56,7 @@ export function toCard(work) {
 export function toModel(work) {
   const { cover } = work
   // Every 3D model has a details row; this only guards the page if one doesn't.
-  const model = work.model ?? { software: [], processNotes: '', polyCount: null, textured: false, externalUrl: null, file: null, turntable: null }
+  const model = work.model ?? { client: '', role: '', software: [], processNotes: '', polyCount: null, textured: false, externalUrl: null, file: null, turntable: null }
   return {
     id: work.slug,
     title: work.title,
@@ -63,12 +65,17 @@ export function toModel(work) {
     tags: work.tags,
     description: work.description,
     processNotes: model.processNotes,
+    client: model.client ?? '',
+    role: model.role ?? '',
     software: model.software,
     polyCount: model.polyCount,
     textured: model.textured,
     externalUrl: model.externalUrl,
     modelUrl: model.file?.url ?? null,
+    // A YouTube video or an animated image; `turntableVideo` says which.
     turntableUrl: model.turntable?.url ?? null,
+    turntableThumb: model.turntable?.thumbnailUrl ?? model.turntable?.url ?? null,
+    turntableVideo: model.turntable?.source === 'youtube',
     posterUrl: cover?.url ?? null,
     alt: cover?.altText || `3D model of ${work.title}`,
     gallery: work.gallery.map((item) => ({
@@ -77,6 +84,7 @@ export function toModel(work) {
       thumbnailUrl: item.thumbnailUrl,
       alt: item.altText,
       caption: item.caption,
+      pass: passLabel(item.pass),
     })),
   }
 }

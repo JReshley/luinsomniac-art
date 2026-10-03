@@ -7,6 +7,10 @@ import { ApiError } from './errors.js'
 
 export const KINDS = ['artwork', 'model', 'video']
 
+// The passes a 3D model's gallery items can be labelled with (the same keys as
+// PASSES in client/src/api/shared.js); '' means none.
+const PASS_KEYS = ['beauty', 'wireframe', 'uv', 'clay', 'other']
+
 // A category about 3D work ("3D", "3D props"…), by its name or slug. Works in
 // one are 3D models: saving an artwork into one makes it a 3D model, and the
 // 3D Showcase lists them, so a 3D piece can't be left out of it.
@@ -39,7 +43,7 @@ export function placeFeatured(db, work, wasFeatured) {
 // The categories a work is in, in its order, as rows.
 export const categoriesOf = (db, work) => (work.categoryIds ?? []).map((id) => db.categories.find((category) => category.id === id)).filter(Boolean)
 
-export const MODEL_FIELDS = ['software', 'processNotes', 'modelMediaId', 'turntableMediaId', 'polyCount', 'textured', 'externalUrl']
+export const MODEL_FIELDS = ['client', 'role', 'software', 'processNotes', 'modelMediaId', 'turntableMediaId', 'polyCount', 'textured', 'externalUrl']
 export const VIDEO_FIELDS = ['mediaId', 'duration', 'audioCleared', 'relatedWorkId']
 
 const invalid = (field, message) => {
@@ -88,7 +92,7 @@ export function presentWork(db, work) {
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((link) => {
         const item = media(link.mediaId)
-        return item && { ...item, caption: link.caption ?? '' }
+        return item && { ...item, caption: link.caption ?? '', pass: link.pass ?? '' }
       })
       .filter(Boolean),
     model: work.kind === 'model' ? db.modelDetails.find((d) => d.workId === work.id) ?? null : null,
@@ -157,6 +161,16 @@ export function validateModel(db, details) {
   } else {
     details.polyCount = null
   }
+  // Who it was for and what Lui did on it, as the Showcase's spec rows.
+  for (const field of ['client', 'role']) {
+    details[field] = String(details[field] ?? '').trim()
+    if (details[field].length > 80) invalid(field, 'Keep it under 80 characters.')
+  }
+  // A turntable is a YouTube video or an animated image.
+  const turntable = db.media.find((media) => media.id === details.turntableMediaId)
+  if (turntable && !(turntable.kind === 'image' || turntable.source === 'youtube')) {
+    invalid('turntableMediaId', 'A turntable is a YouTube video or an animated image (GIF or WebP).')
+  }
   details.textured = Boolean(details.textured)
   details.processNotes = String(details.processNotes ?? '')
   if (details.externalUrl && !/^https:\/\//.test(details.externalUrl)) invalid('externalUrl', 'Links need to start with https://')
@@ -185,13 +199,14 @@ export function validateVideo(db, details) {
 export function galleryRows(db, workId, items) {
   const seen = new Set()
   const rows = []
-  for (const { mediaId, caption } of items) {
+  for (const { mediaId, caption, pass } of items) {
     const media = db.media.find((item) => item.id === mediaId)
     if (!media) invalid('gallery', 'One of the gallery files no longer exists.')
     if (media.kind === 'model') invalid('gallery', 'The gallery takes images and videos. A 3D model goes in the model field.')
     const text = String(caption ?? '').trim()
     if (text.length > 200) invalid('gallery', 'Keep each caption under 200 characters.')
-    if (!seen.has(mediaId)) rows.push({ workId, mediaId, caption: text, sortOrder: rows.length })
+    const passKey = PASS_KEYS.includes(pass) ? pass : ''
+    if (!seen.has(mediaId)) rows.push({ workId, mediaId, caption: text, pass: passKey, sortOrder: rows.length })
     seen.add(mediaId)
   }
   return rows

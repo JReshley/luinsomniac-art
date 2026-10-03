@@ -37,7 +37,7 @@ export default function Showcase3D() {
   return (
     <main id="main" className="mx-auto flex max-w-5xl flex-col gap-1 px-2 pt-4 pb-7 md:px-3 lg:px-5 lg:pt-6.5 lg:pb-9.5">
       <DisplayTitle text="3D Showcase" entrance className="font-display text-display text-primary" />
-      <p className="text-ink/65">Spin, zoom and look closer at each model.</p>
+      <p className="text-ink/65">Turntables, prop sets and breakdown passes.</p>
 
       {model ? (
         <>

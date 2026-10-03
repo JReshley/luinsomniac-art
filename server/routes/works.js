@@ -96,7 +96,7 @@ export function workRoutes({ storage }) {
 
       if (work.kind === 'model') {
         const details = {
-          workId: work.id, software: [], processNotes: '', modelMediaId: null, turntableMediaId: null, polyCount: null, textured: false, externalUrl: null,
+          workId: work.id, client: '', role: '', software: [], processNotes: '', modelMediaId: null, turntableMediaId: null, polyCount: null, textured: false, externalUrl: null,
           ...pick(input.model, MODEL_FIELDS),
         }
         validateModel(db, details)
@@ -108,7 +108,7 @@ export function workRoutes({ storage }) {
         await insertRow(client, 'video_details', details, ['workId', ...VIDEO_FIELDS])
       }
       if (input.gallery) {
-        for (const row of galleryRows(db, work.id, input.gallery)) await insertRow(client, 'work_media', row, ['workId', 'mediaId', 'caption', 'sortOrder'])
+        for (const row of galleryRows(db, work.id, input.gallery)) await insertRow(client, 'work_media', row, ['workId', 'mediaId', 'caption', 'pass', 'sortOrder'])
       }
 
       await logActivity(client, request.admin.id, 'create', 'work', work.id, `Added “${work.title}”`)
@@ -167,7 +167,7 @@ export function workRoutes({ storage }) {
         db.modelDetails = db.modelDetails.filter((d) => d.workId !== id)
         db.videoDetails = db.videoDetails.filter((d) => d.workId !== id)
         if (work.kind === 'model') {
-          const details = { workId: id, software: [], processNotes: '', modelMediaId: null, turntableMediaId: null, polyCount: null, textured: false, externalUrl: null }
+          const details = { workId: id, client: '', role: '', software: [], processNotes: '', modelMediaId: null, turntableMediaId: null, polyCount: null, textured: false, externalUrl: null }
           await insertRow(client, 'model_details', details, ['workId', ...MODEL_FIELDS])
           db.modelDetails.push(details)
         }
@@ -199,7 +199,7 @@ export function workRoutes({ storage }) {
       if (changes.gallery) {
         const rows = galleryRows(db, id, changes.gallery)
         await client.query('DELETE FROM work_media WHERE work_id = $1', [id])
-        for (const row of rows) await insertRow(client, 'work_media', row, ['workId', 'mediaId', 'caption', 'sortOrder'])
+        for (const row of rows) await insertRow(client, 'work_media', row, ['workId', 'mediaId', 'caption', 'pass', 'sortOrder'])
       }
 
       await logActivity(client, request.admin.id, activityAction(before, work), 'work', id, activitySummary(before, work))

@@ -400,6 +400,13 @@ INSERT INTO model_details (work_id)
 SELECT id FROM works
 WHERE kind = 'model' AND NOT EXISTS (SELECT 1 FROM model_details WHERE model_details.work_id = works.id);
 
+-- Added for the 3D Showcase's spec rows and pass thumbnails. Empty means not
+-- given, and the Showcase leaves it out.
+ALTER TABLE model_details ADD COLUMN IF NOT EXISTS client TEXT NOT NULL DEFAULT '' CHECK (length(client) <= 80);
+ALTER TABLE model_details ADD COLUMN IF NOT EXISTS role   TEXT NOT NULL DEFAULT '' CHECK (length(role) <= 80);
+ALTER TABLE work_media    ADD COLUMN IF NOT EXISTS pass   TEXT NOT NULL DEFAULT ''
+  CHECK (pass IN ('', 'beauty', 'wireframe', 'uv', 'clay', 'other'));
+
 -- Lock the tables from Supabase's own data API ---------------------------------
 -- Supabase publishes every table through a REST API that anyone holding the
 -- public (anon) key can call. Row-level security with no policies turns that

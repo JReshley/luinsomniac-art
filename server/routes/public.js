@@ -62,11 +62,13 @@ function publicWork(db, work) {
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((link) => {
         const item = media(link.mediaId)
-        return item && { ...item, caption: link.caption ?? '' }
+        return item && { ...item, caption: link.caption ?? '', pass: link.pass ?? '' }
       })
       .filter(Boolean),
     model: model
       ? {
+          client: model.client ?? '',
+          role: model.role ?? '',
           software: model.software,
           processNotes: model.processNotes,
           file: media(model.modelMediaId),

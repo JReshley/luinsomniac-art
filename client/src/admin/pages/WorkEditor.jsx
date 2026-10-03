@@ -9,6 +9,7 @@ import {
   listActivity,
   listCategories,
   listMedia,
+  PASSES,
   publishBlockers,
   setWorkStatus,
   updateWork,
@@ -198,8 +199,10 @@ function toForm(kind, work) {
     // shown together and saved back as one.
     notes: [work?.notesArtist, work?.notesAdmin].filter((text) => text?.trim()).join('\n\n'),
     coverMediaId: work?.coverMediaId ?? null,
-    gallery: (work?.gallery ?? []).map((media) => ({ mediaId: media.id, caption: media.caption ?? '' })),
+    gallery: (work?.gallery ?? []).map((media) => ({ mediaId: media.id, caption: media.caption ?? '', pass: media.pass ?? '' })),
     model: {
+      client: work?.model?.client ?? '',
+      role: work?.model?.role ?? '',
       modelMediaId: work?.model?.modelMediaId ?? null,
       turntableMediaId: work?.model?.turntableMediaId ?? null,
       software: (work?.model?.software ?? []).join(', '),
@@ -241,6 +244,8 @@ function toInput(form) {
   if (kind === 'model') {
     const { model } = form
     input.model = {
+      client: model.client,
+      role: model.role,
       software: list(model.software),
       processNotes: model.processNotes,
       modelMediaId: model.modelMediaId,
@@ -445,6 +450,7 @@ function WorkForm({ kind, work }) {
   }
   const setCaption = (mediaId, caption) =>
     change({ gallery: form.gallery.map((item) => (item.mediaId === mediaId ? { ...item, caption } : item)) })
+  const setPass = (mediaId, pass) => change({ gallery: form.gallery.map((item) => (item.mediaId === mediaId ? { ...item, pass } : item)) })
 
   // The type being edited, which may differ from the saved one until a save.
   const type = form.kind
@@ -553,30 +559,39 @@ function WorkForm({ kind, work }) {
           {type === 'model' && (
             <MediaField
               label="Turntable"
-              kind="image"
-              hint="An animated spin, as a GIF or WebP, offered as another view in the Showcase."
+              kind="turntable"
+              hint="A YouTube video or an animated GIF/WebP of the model spinning. The 3D Showcase opens on it."
               {...model.media('turntableMediaId')}
             />
           )}
         </Section>
 
         {type === 'model' && (
-          <Section title="Model details" note="Shown beside the model in the 3D Showcase.">
+          <Section title="Model details" note="Shown beside the model in the 3D Showcase, in this order. Anything left blank isn’t shown.">
             <div className="grid gap-2 md:grid-cols-2">
-              <TextField label="Software" optional hint="Separate with commas." placeholder="Blender, Substance Painter" {...model.text('software')} />
+              <TextField label="Client" optional hint="Who it was for." placeholder="Personal" {...model.text('client')} />
+              <TextField label="Role" optional hint="What Lui did on it." placeholder="Model · Look-dev" {...model.text('role')} />
               <TextField label="Triangles" optional inputMode="numeric" placeholder="184000" {...model.text('polyCount')} />
+              <TextField label="Software" optional hint="Separate with commas." placeholder="Blender, Substance Painter" {...model.text('software')} />
             </div>
-            <Checkbox label="Textured" {...model.check('textured')} />
+            <Checkbox label="Textured" hint="Shown only when ticked." {...model.check('textured')} />
             <TextField label="Tags" optional hint="Separate with commas." placeholder="props, diner" {...field('tags')} />
             <TextArea label="Process notes" optional hint="How it was made." rows={4} {...model.text('processNotes')} />
             <TextField label="Link to the model elsewhere" optional type="url" hint="Like its Sketchfab page." placeholder="https://" {...model.text('externalUrl')} />
           </Section>
         )}
 
-        <Section title="Gallery" note="Optional. More images and YouTube videos shown with this work, in this order.">
+        <Section
+          title="Gallery"
+          note={
+            type === 'model'
+              ? 'Optional. The passes shown under the main view in the 3D Showcase, in this order. Pick each one’s pass to label its thumbnail.'
+              : 'Optional. More images and YouTube videos shown with this work, in this order.'
+          }
+        >
           {galleryItems.length > 0 && (
             <ol className="flex flex-col divide-y divide-ink/10 rounded-sm border border-ink/15 bg-surface">
-              {galleryItems.map(({ mediaId, caption, media }, index) => {
+              {galleryItems.map(({ mediaId, caption, pass, media }, index) => {
                 const label = `${media.kind === 'video' ? 'video' : 'image'} ${index + 1}`
                 const captionId = `caption-${mediaId}`
                 return (
@@ -595,6 +610,22 @@ function WorkForm({ kind, work }) {
                           className={ROW_INPUT + 'border-ink/25'}
                         />
                       </div>
+                      {type === 'model' && (
+                        <div className="flex shrink-0 flex-col gap-0.5">
+                          <label htmlFor={`pass-${mediaId}`} className="text-caption font-medium">Pass</label>
+                          <select
+                            id={`pass-${mediaId}`}
+                            value={pass ?? ''}
+                            onChange={(event) => setPass(mediaId, event.target.value)}
+                            className={ROW_INPUT + 'cursor-pointer border-ink/25'}
+                          >
+                            <option value="">None</option>
+                            {PASSES.map(([value, label]) => (
+                              <option key={value} value={value}>{label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                     </div>
                     <span className="flex gap-1 md:shrink-0">
                       <LinkButton disabled={index === 0} onClick={() => moveGallery(index, -1)} aria-label={`Move ${label} up`}>Move up</LinkButton>
@@ -618,7 +649,7 @@ function WorkForm({ kind, work }) {
             onClose={() => setGalleryPicker(null)}
             onPick={(media) => {
               setAddedMedia((prev) => [...prev, media])
-              if (!form.gallery.some((item) => item.mediaId === media.id)) change({ gallery: [...form.gallery, { mediaId: media.id, caption: '' }] })
+              if (!form.gallery.some((item) => item.mediaId === media.id)) change({ gallery: [...form.gallery, { mediaId: media.id, caption: '', pass: '' }] })
               setGalleryPicker(null)
             }}
           />

@@ -10,12 +10,17 @@ import { formatTris } from '../../lib/publicWork.js'
 // different model is picked from the grid.
 
 const ModelDetails = forwardRef(function ModelDetails({ model }, titleRef) {
-  // A spec the admin left blank isn't listed, rather than shown as "null".
+  // In the wireframe's order (Figma 23:1611). Only what the admin filled in is
+  // listed: a blank spec is left out, never shown empty. Textured can't tell
+  // "no" from "not given", so it's only listed when ticked.
   const specs = [
+    model.client && { label: 'Client', value: model.client },
+    model.role && { label: 'Role', value: model.role },
+    model.polyCount != null && { label: 'Tris', value: formatTris(model.polyCount) },
     model.software.length > 0 && { label: 'Software', value: model.software.join(', ') },
-    model.polyCount != null && { label: 'Poly count', value: `${formatTris(model.polyCount)} tris` },
-    { label: 'Textured', value: model.textured ? 'Yes' : 'No' },
+    model.textured && { label: 'Textured', value: 'Yes' },
   ].filter(Boolean)
+  const kicker = [model.category, model.year].filter(Boolean).join(' · ')
 
   const external = externalLink(model.externalUrl)
 
@@ -24,10 +29,9 @@ const ModelDetails = forwardRef(function ModelDetails({ model }, titleRef) {
       <h2 ref={titleRef} tabIndex={-1} className="text-[1.25rem] leading-[1.3] font-semibold focus-visible:outline-none">
         {model.title}
       </h2>
-      <p className="font-mono text-small text-primary uppercase">
-        {[model.category, model.year].filter(Boolean).join(' · ')}
-      </p>
+      {kicker && <p className="font-mono text-small text-primary uppercase">{kicker}</p>}
 
+      {specs.length > 0 && (
       <dl className="mt-1.5 flex flex-col gap-1">
         {specs.map((spec) => (
           <div key={spec.label} className="flex items-baseline justify-between gap-2 border-b border-ink/10 pb-1 last:border-b-0 last:pb-0">
@@ -36,8 +40,9 @@ const ModelDetails = forwardRef(function ModelDetails({ model }, titleRef) {
           </div>
         ))}
       </dl>
+      )}
 
-      <p className="mt-1.5 text-caption text-ink/65">{model.description}</p>
+      {model.description && <p className="mt-1.5 text-caption text-ink/65">{model.description}</p>}
 
       {model.tags.length > 0 && (
         <ul className="mt-1 flex flex-wrap gap-0.5" aria-label="Tags">
