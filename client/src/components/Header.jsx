@@ -10,7 +10,7 @@ import { BUNNIES } from '../data/stickers.js'
 // marked as the current one. NavLink works that out from the URL.
 //
 // Below lg (phones and tablets) the links fold into a hamburger menu that
-// drops down under the bar. From lg up they sit inline as before.
+// drops down over the page. From lg up they sit inline as before.
 
 const NAV_LINKS = [
   { id: 'home', label: 'Home', href: '/' },
@@ -93,12 +93,26 @@ export default function Header() {
         </button>
       </div>
 
-      {/* The dropdown panel. `hidden` (display: none) also takes the links out
-          of the Tab order and the accessibility tree while the menu is shut. */}
+      {/* A dimmed backdrop over the page while the menu is open. Tapping it
+          closes the menu; keyboard users have Esc and the ✕, so it stays out
+          of the Tab order. Absolute, not fixed: the header's backdrop blur
+          would trap a fixed element inside the header anyway. */}
+      {menuOpen && (
+        <div
+          aria-hidden="true"
+          onClick={closeMenu}
+          className="absolute inset-x-0 top-full h-dvh bg-ink/40 motion-safe:animate-fade-in lg:hidden"
+        />
+      )}
+
+      {/* The dropdown panel. It hangs below the bar, over the page, so opening
+          it never pushes the page down. `hidden` (display: none) also takes the
+          links out of the Tab order and the accessibility tree while it's shut.
+          On a short screen it scrolls on its own. */}
       <nav
         id="mobile-menu"
         aria-label="Main"
-        className={`${menuOpen ? 'flex' : 'hidden'} flex-col gap-1 border-t border-ink/10 px-2 pt-1.5 pb-3 md:px-3 lg:hidden`}
+        className={`${menuOpen ? 'flex' : 'hidden'} absolute inset-x-0 top-full max-h-[calc(100dvh-4.5rem)] flex-col gap-1 overflow-y-auto border-y border-ink/10 bg-bg px-2 pt-1.5 pb-3 shadow-[0_8px_16px_rgb(11_21_51/0.12)] md:px-3 lg:hidden`}
       >
         <NavLinks onNavigate={closeMenu} stacked />
         <PeekButton
