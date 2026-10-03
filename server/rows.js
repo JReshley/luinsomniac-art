@@ -31,15 +31,29 @@ const TABLES = {
   activityLog: 'activity_log',
 }
 
-export async function loadDb(db, names) {
-  // One after another: a transaction's single connection can only run one
-  // query at a time.
+//
+// A transaction's single connection can only run one query at a time, so by
+// default they go one after another. Reads straight from the pool pass
+// { parallel: true } and send them all at once: every query is a round trip to
+// the database, and waiting on ten of them in a row is most of a request.
+export async function loadDb(db, names, { parallel = false } = {}) {
   const loaded = {}
-  for (const name of names) loaded[name] = await all(db, TABLES[name])
   // A work's categories live in work_categories; they come with the work.
+  const linksQuery = 'SELECT work_id, category_id FROM work_categories ORDER BY position'
+  let links
+  if (parallel) {
+    const [tables, linkRows] = await Promise.all([
+      Promise.all(names.map((name) => all(db, TABLES[name]))),
+      names.includes('works') ? db.query(linksQuery) : null,
+    ])
+    names.forEach((name, i) => { loaded[name] = tables[i] })
+    links = linkRows?.rows
+  } else {
+    for (const name of names) loaded[name] = await all(db, TABLES[name])
+    if (loaded.works) links = (await db.query(linksQuery)).rows
+  }
   if (loaded.works) {
-    const { rows } = await db.query('SELECT work_id, category_id FROM work_categories ORDER BY position')
-    for (const work of loaded.works) work.categoryIds = rows.filter((row) => row.work_id === work.id).map((row) => row.category_id)
+    for (const work of loaded.works) work.categoryIds = links.filter((row) => row.work_id === work.id).map((row) => row.category_id)
   }
   return loaded
 }

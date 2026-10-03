@@ -3,7 +3,7 @@ import IconButton from './IconButton.jsx'
 import Placeholder from './Placeholder.jsx'
 import PlayIcon from './PlayIcon.jsx'
 import ModelViewer from './showcase/ModelViewer.jsx'
-import { FALLBACK_RATIO, youtubeId } from '../lib/publicWork.js'
+import { FALLBACK_RATIO, imageProps, youtubeId } from '../lib/publicWork.js'
 
 // Full-screen view of one work, built on the native <dialog>. The browser
 // handles Esc to close, keeps focus inside while open, and returns focus to
@@ -87,7 +87,9 @@ export default function Lightbox({ work, onClose, onPrev, onNext, prevLabel = 'P
           ) : work.imageUrl ? (
             <img
               key={work.id}
-              src={work.imageUrl}
+              // Up to 1024px wide (max-w-5xl): a phone takes the 800 or 1200,
+              // a large or high-density screen the full 2000.
+              {...imageProps(work.imageUrl, '(min-width: 64rem) 1024px, 100vw')}
               alt={work.alt || `${work.title}, ${work.category}`}
               className="max-h-[70vh] w-full rounded-lg object-contain motion-safe:animate-fade-in"
             />

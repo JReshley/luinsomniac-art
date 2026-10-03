@@ -22,6 +22,8 @@ import bunnySurprised from '../assets/stickers/web/bunny-surprised.webp'
 import bunnyViolence from '../assets/stickers/web/bunny-violence.webp'
 import bunnyWorkingHardly from '../assets/stickers/web/bunny-working-hardly.webp'
 
+import alienWalk from '../assets/stickers/web/alien-walk.webp'
+
 // Every cat sticker is the same 400 × 312 box shot, so they share one ratio.
 export const CAT_RATIO = 400 / 312
 
@@ -45,3 +47,10 @@ export const BUNNIES = {
   violence: { src: bunnyViolence, ratio: 323 / 480 }, // "Violence is an option": slapped on the corner of the About portrait
   workingHardly: { src: bunnyWorkingHardly, ratio: 480 / 337 }, // asleep on the laptop: 3D models still in progress
 }
+
+// The pixel alien (MAFIA_PixelatedAlien.png) marches over sections while their
+// works load (LoadingWorks.jsx). Its file is a sprite of two frames side by
+// side, the second with its legs flipped, so it walks like a Space Invader.
+// 12 pixel-cells across at 16px each: shown 48px wide, a cell is exactly 4px.
+export const ALIEN = { src: alienWalk, ratio: 192 / 176 }
+

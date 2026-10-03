@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
-import { listPublicCategories, listPublishedWorks, useApi } from '../api/index.js'
+import { usePublicData } from '../api/publicData.js'
 import { toCard } from '../lib/publicWork.js'
 import Button from '../components/Button.jsx'
 import Lightbox from '../components/Lightbox.jsx'
 import WorkCard from '../components/WorkCard.jsx'
 import FilterBar from '../components/museum/FilterBar.jsx'
 import DisplayTitle from '../components/DisplayTitle.jsx'
+import LoadingWorks, { SkeletonCards } from '../components/LoadingWorks.jsx'
 import { CATS } from '../data/stickers.js'
 
 const ALL = 'All'
@@ -17,9 +18,9 @@ const PAGE_SIZE = 8
 const END_CAT = CATS.find((cat) => cat.id === 'tilapia').src
 
 export default function Museum() {
-  const { data: works, error } = useApi(() => listPublishedWorks(), [])
+  const { data: works, error } = usePublicData('works')
   // In the order set in the admin, and only categories with published work.
-  const { data: categories } = useApi(listPublicCategories, [])
+  const { data: categories } = usePublicData('categories')
 
   // Newest first. sort() is stable, so works from the same year keep the order
   // set in the admin. A work with no year goes last.
@@ -60,12 +61,17 @@ export default function Museum() {
 
       {error && !works && <p role="alert" className="text-ink/80">The works couldn’t load. Reload the page to try again.</p>}
       {works?.length === 0 && <p className="text-ink/65">Nothing is on display yet. Check back soon.</p>}
+      {!works && !error && (
+        <LoadingWorks label="Beaming in the collection…">
+          <SkeletonCards count={PAGE_SIZE} className="columns-2 gap-2 md:columns-3 lg:columns-4 lg:gap-2.5" />
+        </LoadingWorks>
+      )}
 
       {/* CSS columns give the masonry layout: cards fill each column top to bottom. */}
       <div className="columns-2 gap-2 md:columns-3 lg:columns-4 lg:gap-2.5">
         {shown.map((work, index) => (
           <div key={work.id} className="hang-in mb-2 break-inside-avoid lg:mb-2.5">
-            <WorkCard work={work} onOpen={() => setOpenIndex(index)} />
+            <WorkCard work={work} onOpen={() => setOpenIndex(index)} sizes="(min-width: 64rem) 25vw, (min-width: 48rem) 33vw, 50vw" />
           </div>
         ))}
       </div>

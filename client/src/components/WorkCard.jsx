@@ -1,10 +1,11 @@
 import Placeholder from './Placeholder.jsx'
 import PlayIcon from './PlayIcon.jsx'
-import { FALLBACK_RATIO } from '../lib/publicWork.js'
+import { FALLBACK_RATIO, imageProps } from '../lib/publicWork.js'
 
 // One piece of work in a grid. Clicking it calls onOpen, which shows the Lightbox.
 // The small label on the right is the work's category unless `meta` replaces it
-// (the 3D Showcase shows the poly count there).
+// (the 3D Showcase shows the poly count there). `sizes` is how wide the card
+// is in its grid, so its picture downloads at a size that fits (imageProps).
 
 // Cards stay light until hovered (or focused from the keyboard), when they
 // turn navy with an orange title (and an orange play badge on videos), and
@@ -20,7 +21,7 @@ const DARK_ON_HOVER = {
   play: 'group-hover:bg-accent group-hover:text-ink group-focus-visible:bg-accent group-focus-visible:text-ink',
 }
 
-export default function WorkCard({ work, meta = work.category, onOpen }) {
+export default function WorkCard({ work, meta = work.category, onOpen, sizes = '50vw' }) {
   const isVideo = work.type === 'video'
 
   // The ratio comes from data, so it is set inline: Tailwind only generates
@@ -37,7 +38,7 @@ export default function WorkCard({ work, meta = work.category, onOpen }) {
     >
       {work.imageUrl ? (
         <span className="relative block">
-          <img src={work.imageUrl} alt="" loading="lazy" className="w-full object-cover" style={ratio} />
+          <img {...imageProps(work.imageUrl, sizes)} alt="" loading="lazy" className="w-full object-cover" style={ratio} />
           {/* The picture is the video's cover, so it needs the badge too. */}
           {isVideo && (
             <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">

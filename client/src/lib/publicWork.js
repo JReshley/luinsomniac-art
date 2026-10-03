@@ -22,6 +22,36 @@ export function youtubeId(url) {
   }
 }
 
+// The <img> attributes for a picture shown `sizes` wide (the same syntax as
+// the attribute, e.g. "(min-width: 64rem) 25vw, 50vw").
+//
+// A Drive image (mediaFiles.js turns it into Drive's thumbnail link, 2000px
+// wide) comes in several widths, so the browser downloads the smallest one
+// that's still sharp on that screen: a card on a phone takes the 400 or 800,
+// not the 2000. Any other picture (an upload, already shrunk to at most
+// 2000px when it went up) has the one size, so it's left as it is.
+const DRIVE_WIDTHS = [400, 800, 1200, 2000]
+
+export function imageProps(url, sizes) {
+  if (!url) return {}
+  let link
+  try {
+    link = new URL(url)
+  } catch {
+    return { src: url }
+  }
+  if (link.hostname !== 'drive.google.com' || !link.pathname.startsWith('/thumbnail')) return { src: url }
+  const at = (width) => {
+    link.searchParams.set('sz', `w${width}`)
+    return link.toString()
+  }
+  return {
+    src: at(800),
+    srcSet: DRIVE_WIDTHS.map((width) => `${at(width)} ${width}w`).join(', '),
+    sizes,
+  }
+}
+
 // 184000 -> "184k", 1250000 -> "1.3M". Small counts stay as they are.
 export function formatTris(count) {
   if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`

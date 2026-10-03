@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo } from 'react'
-import { getSiteContent, useApi } from '../api/index.js'
+import { usePublicData } from '../api/publicData.js'
 import { EMAIL, SOCIALS } from '../data/contact.js'
 import { DEFAULT_EXPERIENCE, DEFAULT_TEXT, softwareList } from '../data/siteText.js'
 
@@ -50,7 +50,7 @@ function build(data) {
 const SiteContext = createContext(build(null))
 
 export function SiteProvider({ children }) {
-  const { data } = useApi(getSiteContent, [])
+  const { data } = usePublicData('site')
   const site = useMemo(() => build(data), [data])
 
   // The browser-tab icon, when the admin has uploaded one.

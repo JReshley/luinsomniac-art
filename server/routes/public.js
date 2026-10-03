@@ -11,7 +11,12 @@ import { categoriesOf, FEATURED_LIMIT, is3dCategory } from '../workRules.js'
 // never leave the admin, and a column added later stays private until it is
 // listed here.
 
-const TABLES = ['works', 'media', 'categories', 'modelDetails', 'videoDetails', 'workMedia', 'siteText', 'socialLinks', 'settings']
+// The tables each answer is built from, and no more: they're read all at once
+// from the pool, but every extra table is still more for the database to send.
+const WORK_TABLES = ['works', 'media', 'categories', 'modelDetails', 'videoDetails', 'workMedia']
+const CATEGORY_TABLES = ['works', 'categories']
+const SITE_TABLES = ['media', 'siteText', 'socialLinks', 'settings']
+const load = (tables) => loadDb(pool, tables, { parallel: true })
 
 // The About page's experience rows, in order. Read on their own, and a
 // database that doesn't have the table yet (schema.sql not run since it was
@@ -95,16 +100,21 @@ export function publicRoutes({ storage }) {
   const withUrls = (value) => resolveMediaUrls(value, storage)
 
   // A short cache: the site reads this on every page, and a change in the
-  // admin only needs to show up within a minute.
+  // admin only needs to show up within a minute. Vercel's CDN answers from a
+  // copy for 30 seconds, and for 30 more while it fetches a fresh one in the
+  // background, so most visitors never wait on the database. Browsers check
+  // back every time instead (no-cache; an unchanged answer is a quick 304):
+  // a copy of their own would push an edit past the minute.
   router.use((request, response, next) => {
-    response.set('Cache-Control', 'public, max-age=30')
+    response.set('Vercel-CDN-Cache-Control', 'max-age=30, stale-while-revalidate=30')
+    response.set('Cache-Control', 'no-cache')
     next()
   })
 
   // Filters, all optional: kind, category (a slug), featured=true.
   router.get('/works', route(async (request, response) => {
     const { kind, category, featured } = request.query
-    const db = await loadDb(pool, TABLES)
+    const db = await load(WORK_TABLES)
     const categoryId = category && db.categories.find((item) => item.slug === category)?.id
     const works = published(db)
       .filter((work) => (!kind || shownKind(db, work) === kind) && (!category || work.categoryIds.includes(categoryId)) && (featured !== 'true' || work.featured))
@@ -117,7 +127,7 @@ export function publicRoutes({ storage }) {
 
   // A draft or archived work is "not found", the same as one that doesn't exist.
   router.get('/works/:slug', route(async (request, response) => {
-    const db = await loadDb(pool, TABLES)
+    const db = await load(WORK_TABLES)
     const row = published(db).find((item) => item.slug === request.params.slug)
     if (!row) throw new ApiError('not_found', 'There’s no work at this address.')
     response.json(withUrls(publicWork(db, row)))
@@ -125,7 +135,7 @@ export function publicRoutes({ storage }) {
 
   // The Museum's filter chips: in order, and only ones with published work.
   router.get('/categories', route(async (request, response) => {
-    const db = await loadDb(pool, TABLES)
+    const db = await load(CATEGORY_TABLES)
     response.json(
       db.categories
         .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -139,7 +149,7 @@ export function publicRoutes({ storage }) {
   // logo, icon and portrait are null when the bundled copy should be used;
   // portrait and homeReel (a YouTube video) show a placeholder when null.
   router.get('/site', route(async (request, response) => {
-    const db = await loadDb(pool, TABLES)
+    const [db, experience] = await Promise.all([load(SITE_TABLES), publicExperience()])
     const setting = (key) => db.settings.find((item) => item.key === key)
     const image = (key) => publicMedia(db.media.find((media) => media.id === setting(key)?.mediaId))
     response.json(
@@ -155,7 +165,7 @@ export function publicRoutes({ storage }) {
         icon: image('icon'),
         portrait: image('portrait'),
         homeReel: image('home_reel'),
-        experience: await publicExperience(),
+        experience,
       })
     )
   }))

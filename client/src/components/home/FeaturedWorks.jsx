@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react'
-import { listPublishedWorks, useApi } from '../../api/index.js'
+import { usePublicData } from '../../api/publicData.js'
 import { toCard } from '../../lib/publicWork.js'
 import { BUNNIES } from '../../data/stickers.js'
 import PeekButton from '../PeekButton.jsx'
 import Lightbox from '../Lightbox.jsx'
 import SectionHeader from '../SectionHeader.jsx'
 import WorkCard from '../WorkCard.jsx'
+import LoadingWorks, { SkeletonCards } from '../LoadingWorks.jsx'
 
 export default function FeaturedWorks() {
-  const { data, error } = useApi(() => listPublishedWorks({ featured: true }), [])
+  const { data, error } = usePublicData('featured')
   const featured = useMemo(() => (data ?? []).map(toCard), [data])
 
   // Index of the work shown in the Lightbox, or null when it is closed.
@@ -38,10 +39,15 @@ export default function FeaturedWorks() {
         {/* CSS columns give the masonry layout: cards fill each column top to bottom. */}
         {error && !data && <p role="alert" className="text-bg/80">The featured works couldn’t load. Reload the page to try again.</p>}
         {data?.length === 0 && <p className="text-bg/65">Nothing is featured right now.</p>}
+        {!data && !error && (
+          <LoadingWorks label="Beaming in the featured works…" onDark>
+            <SkeletonCards count={6} onDark className="columns-2 gap-2 lg:columns-3 lg:gap-2.5" />
+          </LoadingWorks>
+        )}
         <div className="columns-2 gap-2 lg:columns-3 lg:gap-2.5">
           {featured.map((work, index) => (
             <div key={work.id} className="hang-in mb-2 break-inside-avoid lg:mb-2.5">
-              <WorkCard work={work} onOpen={() => setOpenIndex(index)} />
+              <WorkCard work={work} onOpen={() => setOpenIndex(index)} sizes="(min-width: 64rem) 33vw, 50vw" />
             </div>
           ))}
         </div>

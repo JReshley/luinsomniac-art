@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { youtubeId } from '../../lib/publicWork.js'
+import { imageProps, youtubeId } from '../../lib/publicWork.js'
 import Lightbox from '../Lightbox.jsx'
 import ModelViewer, { StillWorking } from './ModelViewer.jsx'
 
@@ -156,6 +156,10 @@ function ExpandIcon() {
   )
 }
 
+// The stage is the page's width on phones and tablets, and about 720px beside
+// the details panel on a desktop.
+const STAGE_SIZES = '(min-width: 64rem) 720px, 100vw'
+
 function View({ model, view }) {
   if (view.item?.kind === 'video') {
     const id = youtubeId(view.item.url)
@@ -171,7 +175,7 @@ function View({ model, view }) {
   }
 
   if (view.item) {
-    return <img src={view.item.url} alt={view.item.alt || view.item.caption} className="size-full object-contain" />
+    return <img {...imageProps(view.item.url, STAGE_SIZES)} alt={view.item.alt || view.item.caption} className="size-full object-contain" />
   }
 
   if (view.id === 'turntable' && model.turntableVideo) {
@@ -187,11 +191,11 @@ function View({ model, view }) {
   }
 
   if (view.id === 'turntable') {
-    return <img src={model.turntableUrl} alt={`Turntable of ${model.title}`} className="size-full object-contain" />
+    return <img {...imageProps(model.turntableUrl, STAGE_SIZES)} alt={`Turntable of ${model.title}`} className="size-full object-contain" />
   }
 
   if (view.id === 'poster') {
-    return <img src={model.posterUrl} alt={model.alt} className="size-full object-cover" />
+    return <img {...imageProps(model.posterUrl, STAGE_SIZES)} alt={model.alt} className="size-full object-cover" />
   }
 
   if (!model.modelUrl) {

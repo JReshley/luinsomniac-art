@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import { prefetchPublicData } from './api/publicData.js'
 import Header from './components/Header.jsx'
 import Footer from './components/Footer.jsx'
 import { SiteProvider, useSite } from './components/SiteContent.jsx'
@@ -7,6 +8,8 @@ import { SiteProvider, useSite } from './components/SiteContent.jsx'
 // The frame around every page. The pages themselves are routes in main.jsx;
 // <Outlet /> is where the current one renders.
 export default function App() {
+  useEffect(prefetchPublicData, [])
+
   return (
     <SiteProvider>
       <a
@@ -19,11 +22,19 @@ export default function App() {
       <ScrollToTop />
       <PageTitle />
 
-      <Header />
+      {/* Cards swing in tilted (.hang-in) and stickers slap in oversized
+          (.slap-in), so for a moment they poke past the screen's edge. This
+          clips them, so the page is never wider than the screen and can't be
+          dragged sideways on a phone. It's on a wrapper, not <body>, because
+          phone browsers (iPhone Safari especially) ignore it there. clip,
+          unlike hidden, leaves the sticky header and panels working. */}
+      <div className="overflow-x-clip">
+        <Header />
 
-      <Outlet />
+        <Outlet />
 
-      <Footer />
+        <Footer />
+      </div>
     </SiteProvider>
   )
 }

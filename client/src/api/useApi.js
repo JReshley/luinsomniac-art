@@ -16,8 +16,13 @@ import { subscribe } from './changes.js'
 // While it reloads, the previous `data` stays on screen instead of flashing
 // empty; a reload that fails keeps it too, with `error` set, so the screen can
 // say the list may be out of date (see <RefreshStatus> in admin/ui.jsx).
-export function useApi(load, deps) {
-  const [state, setState] = useState({ data: undefined, error: null, loading: true })
+//
+// The public site passes a `key` too (publicData.js). Data loaded under a key
+// is kept for the visit, so going back to a page shows it straight away while
+// it's checked again quietly, and two calls for the same key at once share
+// one request. prefetch() fills a key ahead of time.
+export function useApi(load, deps, key) {
+  const [state, setState] = useState(() => ({ data: remembered.get(key), error: null, loading: true }))
   const latest = useRef(0)
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -29,7 +34,7 @@ export function useApi(load, deps) {
     const call = ++latest.current
     setState((prev) => ({ ...prev, loading: true }))
     try {
-      const data = await run()
+      const data = await (key ? shared(key, run) : run())
       if (call === latest.current) setState({ data, error: null, loading: false })
     } catch (error) {
       if (call === latest.current) setState((prev) => ({ data: prev.data, error, loading: false }))
@@ -54,4 +59,27 @@ export function useApi(load, deps) {
   }, [reload])
 
   return { ...state, reload, setData }
+}
+
+// The last answer for each key, and the request for it still in flight.
+const remembered = new Map()
+const inFlight = new Map()
+
+function shared(key, load) {
+  if (!inFlight.has(key)) {
+    const request = load()
+      .then((data) => {
+        remembered.set(key, data)
+        return data
+      })
+      .finally(() => inFlight.delete(key))
+    inFlight.set(key, request)
+  }
+  return inFlight.get(key)
+}
+
+// Loads a key's data ahead of time, unless it's already here or on its way.
+// A failure is ignored: the page that needs the data will try again.
+export function prefetch(key, load) {
+  if (!remembered.has(key)) shared(key, load).catch(() => {})
 }

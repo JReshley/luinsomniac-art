@@ -6,6 +6,7 @@ import { useSite } from '../components/SiteContent.jsx'
 import DisplayTitle from '../components/DisplayTitle.jsx'
 import SlapSticker from '../components/SlapSticker.jsx'
 import { BUNNIES } from '../data/stickers.js'
+import { imageProps } from '../lib/publicWork.js'
 
 // The About page body from the Figma wireframe (04 · About, node 23:1685):
 // a portrait and contact links on the left, the bio, experience timeline and
@@ -31,7 +32,7 @@ export default function About() {
               a sticker on a laptop lid. */}
           <div className="relative w-[120px] shrink-0 md:w-full">
             {portrait ? (
-              <img src={portrait.url} alt={portrait.altText || 'Portrait of Lui'} className="aspect-[3/4] w-full rounded-lg object-cover" />
+              <img {...imageProps(portrait.url, '(min-width: 48rem) 260px, 120px')} alt={portrait.altText || 'Portrait of Lui'} className="aspect-[3/4] w-full rounded-lg object-cover" />
             ) : (
               <Placeholder label="Portrait photo" className="aspect-[3/4] w-full rounded-lg" />
             )}

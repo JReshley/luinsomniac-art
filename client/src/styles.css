@@ -81,9 +81,6 @@
 @layer base {
   body {
     @apply bg-bg font-sans text-body text-ink antialiased;
-    /* Cards swing in rotated (.hang-in) and briefly poke past the edge; clip,
-       unlike hidden, leaves the sticky header and panels working. */
-    overflow-x: clip;
   }
 
   /* Every page's <main> is at least one screen tall, so the footer starts
@@ -233,6 +230,18 @@
     }
   }
 
+  /* The loading alien (LoadingWorks.jsx) swaps between its two frames, a
+     step at a time, and marches from one side of its track to the other and
+     back in jerky hops, like a row of Space Invaders. It's centred on the
+     track, so with reduced motion it just stands in the middle. */
+  @media (prefers-reduced-motion: no-preference) {
+    .alien {
+      animation:
+        alien-step 0.6s steps(1, end) infinite,
+        alien-march 5s steps(9, jump-none) infinite alternate;
+    }
+  }
+
   /* Stickers spring as they're lifted and stuck down, and swing as they're
      dragged (the swing itself is set from StickerBoard.jsx). Position is left
      out so a dragged sticker stays right under the pointer. */
@@ -298,6 +307,16 @@
 
 @keyframes hang-in {
   from { opacity: 0; translate: 0 2rem; rotate: var(--swing); }
+}
+
+@keyframes alien-step {
+  50% { background-position: 100% 0; }
+}
+
+/* 100cqw is the track's width (a size container); 100% the alien's own. */
+@keyframes alien-march {
+  from { translate: calc(-50cqw + 50%) 0; }
+  to { translate: calc(50cqw - 50%) 0; }
 }
 
 @keyframes slap-in {

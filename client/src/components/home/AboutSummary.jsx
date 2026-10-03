@@ -4,6 +4,7 @@ import Chip from '../Chip.jsx'
 import DisplayTitle from '../DisplayTitle.jsx'
 import Placeholder from '../Placeholder.jsx'
 import { useSite } from '../SiteContent.jsx'
+import { imageProps } from '../../lib/publicWork.js'
 
 // A grid so the portrait can change places. On phones it is a thumbnail beside
 // the heading, so the text starts on the same screen (as on the About page).
@@ -15,7 +16,7 @@ export default function AboutSummary() {
   return (
     <section className="mx-auto grid max-w-6xl grid-cols-[120px_1fr] items-center gap-x-2.5 gap-y-3 px-2 py-6 md:grid-cols-[300px_1fr] md:gap-x-5 md:gap-y-2 md:px-3 lg:px-5 lg:py-8">
       {portrait ? (
-        <img src={portrait.url} alt={portrait.altText || 'Portrait of Lui'} className="aspect-[3/4] w-full rounded-lg object-cover md:row-span-2" />
+        <img {...imageProps(portrait.url, '(min-width: 48rem) 300px, 120px')} alt={portrait.altText || 'Portrait of Lui'} className="aspect-[3/4] w-full rounded-lg object-cover md:row-span-2" />
       ) : (
         <Placeholder label="Portrait photo" className="aspect-[3/4] w-full rounded-lg md:row-span-2" />
       )}
