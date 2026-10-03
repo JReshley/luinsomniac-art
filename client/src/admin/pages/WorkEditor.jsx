@@ -4,6 +4,7 @@ import {
   archiveWork,
   createWork,
   getWork,
+  is3dCategory,
   KINDS,
   listActivity,
   listCategories,
@@ -69,10 +70,17 @@ export default function WorkEditor() {
 }
 
 const KIND_CHOICES = [
-  ['artwork', 'Add an artwork', 'A drawing, painting or other image.'],
-  ['model', 'Add a 3D model', 'A .glb file people can turn around in the 3D Showcase.'],
+  ['artwork', 'Add an artwork', 'A 2D drawing, painting or illustration. Shown in the Museum.'],
+  ['model', 'Add a 3D model', 'Renders, a turntable and the .glb file if you have it. Shown in the 3D Showcase with its software, poly count and process notes.'],
   ['video', 'Add a video', 'An animation or reel hosted on YouTube.'],
 ]
+
+// What each type is for, under the Type field.
+const KIND_HINTS = {
+  artwork: 'A 2D piece. Shown in the Museum.',
+  model: 'Shown in the 3D Showcase with its 3D details, and in the Museum.',
+  video: 'A YouTube video. Shown in the Museum.',
+}
 
 function ChooseKind() {
   return (
@@ -171,6 +179,7 @@ const fieldKey = (field) => (MODEL_FIELDS.includes(field) ? `model.${field}` : f
 
 function toForm(kind, work) {
   return {
+    kind: work?.kind ?? kind,
     title: work?.title ?? '',
     categoryId: work ? work.categoryId ?? '' : lastCategory(),
     year: work?.year == null ? '' : String(work.year),
@@ -206,8 +215,10 @@ function toForm(kind, work) {
   }
 }
 
-function toInput(kind, form) {
+function toInput(form) {
+  const { kind } = form
   const input = {
+    kind,
     title: form.title,
     year: form.year.trim() === '' ? null : form.year,
     categoryId: form.categoryId || null,
@@ -245,7 +256,8 @@ function WorkForm({ kind, work }) {
   const isNew = !work
   const draftKey = isNew ? `new-${kind}` : `work-${work.id}`
   const [draft] = useState(() => readDraft(draftKey))
-  const [form, setForm] = useState(() => draft?.value ?? toForm(kind, work))
+  // Laid over a fresh form, so a draft kept before a field existed still has it.
+  const [form, setForm] = useState(() => ({ ...toForm(kind, work), ...draft?.value }))
   const [saved, setSaved] = useState(() => JSON.stringify(toForm(kind, work)))
   const [restoredAt, setRestoredAt] = useState(draft?.at ?? null)
   const [busy, setBusy] = useState(false)
@@ -264,6 +276,10 @@ function WorkForm({ kind, work }) {
   const { data: categories = [] } = useApi(listCategories, [])
   const { data: history = [] } = useApi(() => (work ? listActivity({ entity: 'work', entityId: work.id, limit: 5 }) : []), [work?.id])
 
+  useEffect(() => {
+    if (form.kind === 'artwork' && in3dCategory(form.categoryId)) setForm((prev) => ({ ...prev, kind: 'model' }))
+  }, [categories]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // --- Unsaved changes -------------------------------------------------------
   // A ref, so the blocker and the save handler see the latest value at once.
   const dirty = JSON.stringify(form) !== saved
@@ -281,8 +297,15 @@ function WorkForm({ kind, work }) {
   }, [dirty])
 
   // --- Editing ---------------------------------------------------------------
+  // A 3D category makes the work a 3D model, so its 3D fields show at once.
+  const in3dCategory = (categoryId) => is3dCategory(categories.find((category) => category.id === categoryId))
   const change = (patch) => {
-    setForm((prev) => ({ ...prev, ...patch }))
+    setForm((prev) => {
+      const next = { ...prev, ...patch }
+      if (next.kind === 'artwork' && in3dCategory(next.categoryId)) next.kind = 'model'
+      return next
+    })
+    if (patch.kind) validation.clear('kind')
     setJustSaved(false)
   }
   const field = (name) => ({
@@ -339,10 +362,10 @@ function WorkForm({ kind, work }) {
 
     setBusy(true)
     try {
-      const input = toInput(kind, form)
+      const input = toInput(form)
       rememberCategory(form.categoryId)
       if (isNew) {
-        const created = await createWork({ ...input, kind })
+        const created = await createWork(input)
         // Mark clean first so leaving for the new work's page isn't blocked.
         dirtyRef.current = false
         clearDraft(draftKey)
@@ -350,7 +373,7 @@ function WorkForm({ kind, work }) {
       } else {
         const updated = await updateWork(work.id, input)
         // The server may tidy values (tags), so show what it kept.
-        const next = toForm(kind, updated)
+        const next = toForm(updated.kind, updated)
         setForm(next)
         setSaved(JSON.stringify(next))
         setRestoredAt(null)
@@ -420,7 +443,12 @@ function WorkForm({ kind, work }) {
   const setCaption = (mediaId, caption) =>
     change({ gallery: form.gallery.map((item) => (item.mediaId === mediaId ? { ...item, caption } : item)) })
 
-  const [coverLabel, coverHint] = COVER_COPY[kind]
+  // The type being edited, which may differ from the saved one until a save.
+  const type = form.kind
+  const savedKind = JSON.parse(saved).kind
+  const [coverLabel, coverHint] = COVER_COPY[type]
+  const categoryName = categories.find((category) => category.id === form.categoryId)?.name ?? ''
+  const forced3d = in3dCategory(form.categoryId)
   const savedStatus = JSON.parse(saved).status
   const saveLabel = isNew ? (form.status === 'published' ? 'Publish work' : 'Save draft') : 'Save changes'
 
@@ -430,10 +458,10 @@ function WorkForm({ kind, work }) {
         <Link to="/admin/works" className="inline-flex min-h-[2.75rem] items-center text-primary underline-offset-2 hover:underline">← Back to all works</Link>
       </p>
 
-      <AdminPageHeader title={isNew ? NEW_TITLES[kind] : work.title}>
+      <AdminPageHeader title={isNew ? NEW_TITLES[type] : work.title}>
         {isNew
           ? 'Fill in what you have. A draft can be saved without its files.'
-          : `${KIND_LABELS[kind]} · last edited${work.updatedByName ? ` by ${work.updatedByName}` : ''} ${new Date(work.updatedAt).toLocaleDateString()}`}
+          : `${KIND_LABELS[savedKind]} · last edited${work.updatedByName ? ` by ${work.updatedByName}` : ''} ${new Date(work.updatedAt).toLocaleDateString()}`}
       </AdminPageHeader>
 
       <form onSubmit={handleSubmit} noValidate className="flex max-w-[40rem] flex-col">
@@ -451,6 +479,23 @@ function WorkForm({ kind, work }) {
         </p>
 
         <Section title="Details" first>
+          <SelectField
+            label="Type"
+            required
+            hint={forced3d && type === 'model' ? `A 3D model because it’s in the “${categoryName}” category. Shown in the 3D Showcase with its 3D details.` : KIND_HINTS[type]}
+            {...field('kind')}
+          >
+            {KINDS.map((value) => (
+              // Works in a 3D category can't be plain artworks.
+              <option key={value} value={value} disabled={value === 'artwork' && forced3d}>{KIND_LABELS[value]}</option>
+            ))}
+          </SelectField>
+          {!isNew && type !== savedKind && savedKind !== 'artwork' && (
+            <Notice tone="error">
+              Saving makes this {KIND_LABELS[type].toLowerCase()} and removes its {savedKind === 'model' ? '.glb file, turntable and 3D details' : 'YouTube link'}.
+              The title, files, gallery and notes stay.
+            </Notice>
+          )}
           <TextField label="Title" required autoFocus={isNew} {...field('title')} />
           <div className="grid gap-2 md:grid-cols-[2fr_1fr]">
             <SelectField label="Category" optional hint="The Museum filter it appears under." {...field('categoryId')}>
@@ -465,16 +510,15 @@ function WorkForm({ kind, work }) {
         </Section>
 
         <Section title="Files">
-          {kind === 'model' && (
+          {type === 'model' && (
             <MediaField
               label=".glb file"
               kind="model"
-              required
-              hint="The model people turn around in the 3D Showcase. It must be uploaded; linked models don’t load."
+              hint="Lets visitors spin and zoom the model in the 3D Showcase. Without it, the Showcase shows the poster, turntable and gallery. It must be uploaded; linked models don’t load."
               {...model.media('modelMediaId')}
             />
           )}
-          {kind === 'video' && <MediaField label="YouTube video" kind="video" required {...video.media('mediaId')} />}
+          {type === 'video' && <MediaField label="YouTube video" kind="video" required {...video.media('mediaId')} />}
           <MediaField
             label={coverLabel}
             kind="image"
@@ -488,7 +532,7 @@ function WorkForm({ kind, work }) {
               validation.clear('coverMediaId')
             }}
           />
-          {kind === 'model' && (
+          {type === 'model' && (
             <MediaField
               label="Turntable"
               kind="image"
@@ -498,7 +542,7 @@ function WorkForm({ kind, work }) {
           )}
         </Section>
 
-        {kind === 'model' && (
+        {type === 'model' && (
           <Section title="Model details" note="Shown beside the model in the 3D Showcase.">
             <div className="grid gap-2 md:grid-cols-2">
               <TextField label="Software" optional hint="Separate with commas." placeholder="Blender, Substance Painter" {...model.text('software')} />

@@ -12,6 +12,7 @@
 
 import { ApiError, query } from './db.js'
 import { resolveMediaUrls } from './media.js'
+import { is3dCategory } from './shared.js'
 
 const publicMedia = (media) =>
   media
@@ -37,7 +38,7 @@ function publicWork(db, work) {
 
   return {
     slug: work.slug,
-    kind: work.kind,
+    kind: shownKind(db, work),
     title: work.title,
     year: work.year,
     category: category ? { name: category.name, slug: category.slug } : null,
@@ -68,6 +69,12 @@ function publicWork(db, work) {
   }
 }
 
+// How the public site treats a work: an artwork in a 3D category is a 3D
+// model (saved before that rule, or not saved since), so the 3D Showcase
+// lists it. It has no 3D details until it's saved again.
+const shownKind = (db, work) =>
+  work.kind === 'artwork' && is3dCategory(db.categories.find((item) => item.id === work.categoryId)) ? 'model' : work.kind
+
 const published = (db) => db.works.filter((work) => work.status === 'published').sort((a, b) => a.sortOrder - b.sortOrder)
 
 // Filters, all optional: kind, category (a slug), featured (true).
@@ -75,7 +82,7 @@ export async function listPublishedWorks({ kind, category, featured } = {}) {
   const works = await query((db) => {
     const categoryId = category && db.categories.find((item) => item.slug === category)?.id
     return published(db)
-      .filter((work) => (!kind || work.kind === kind) && (!category || work.categoryId === categoryId) && (!featured || work.featured))
+      .filter((work) => (!kind || shownKind(db, work) === kind) && (!category || work.categoryId === categoryId) && (!featured || work.featured))
       .map((work) => publicWork(db, work))
   })
   return resolveMediaUrls(works)

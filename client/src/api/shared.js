@@ -27,6 +27,11 @@ export function experienceProblem(row) {
   return null
 }
 
+// A category about 3D work ("3D", "3D props"…), by its name or slug. Works in
+// one are 3D models: saving an artwork into one makes it a 3D model, and the
+// 3D Showcase lists them, so a 3D piece can't be left out of it.
+export const is3dCategory = (category) => /(^|[^a-z0-9])3d([^a-z0-9]|$)/i.test(`${category?.name ?? ''} ${category?.slug ?? ''}`)
+
 // Supabase's free plan includes 1 GB of file storage.
 export const STORAGE_LIMIT_BYTES = 1024 ** 3
 

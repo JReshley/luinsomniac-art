@@ -6,7 +6,7 @@ import { ApiError, route } from '../errors.js'
 import { resolveMediaUrls } from '../mediaFiles.js'
 import { insertRow, loadDb, pick, updateRow } from '../rows.js'
 import {
-  activityAction, activitySummary, galleryRows, KINDS, MODEL_FIELDS, presentWork, slugify, uniqueSlug,
+  activityAction, activitySummary, galleryRows, is3dCategory, KINDS, MODEL_FIELDS, presentWork, slugify, uniqueSlug,
   validateModel, validateVideo, validateWork, VIDEO_FIELDS, WORK_FIELDS,
 } from '../workRules.js'
 
@@ -77,6 +77,7 @@ export function workRoutes({ storage }) {
         ...pick(input, WORK_FIELDS),
       }
       if (!String(input.slug ?? '').trim()) work.slug = uniqueSlug(db, slugify(String(work.title ?? '')), work.id)
+      if (work.kind === 'artwork' && is3dCategory(db.categories.find((item) => item.id === work.categoryId))) work.kind = 'model'
       validateWork(db, work)
       await insertRow(client, 'works', work, ['id', 'kind', ...WORK_COLUMNS])
 
@@ -105,9 +106,9 @@ export function workRoutes({ storage }) {
     response.status(201).json(withUrls(presentWork(db, db.works.find((work) => work.id === id))))
   }))
 
-  // body: any WORK_FIELDS, plus `model` / `video` (merged into the details) and
-  // `gallery` (replaces the gallery, in that order). A work's kind can't
-  // change: make a new work instead.
+  // body: any WORK_FIELDS, plus `kind` (changes the type: the old type's
+  // details are dropped and the new type's start empty), `model` / `video`
+  // (merged into the details) and `gallery` (replaces the gallery, in order).
   router.patch('/:id', route(async (request, response) => {
     const changes = request.body ?? {}
     const { id } = request.params
@@ -117,6 +118,32 @@ export function workRoutes({ storage }) {
       const work = db.works.find((item) => item.id === id)
       if (!work) throw notFound()
       const before = { ...work }
+
+      // A new type: the details rows point at (id, kind), so the old ones go
+      // first, then the kind changes, then the new type's empty row is made.
+      // The type asked for, unless the category makes it a 3D model.
+      let nextKind = changes.kind ?? work.kind
+      const nextCategoryId = changes.categoryId !== undefined ? changes.categoryId : work.categoryId
+      if (nextKind === 'artwork' && is3dCategory(db.categories.find((item) => item.id === nextCategoryId))) nextKind = 'model'
+      if (nextKind !== work.kind) {
+        if (!KINDS.includes(nextKind)) throw new ApiError('invalid', 'Pick a type: artwork, 3D model or video.', { field: 'kind' })
+        await client.query('DELETE FROM model_details WHERE work_id = $1', [id])
+        await client.query('DELETE FROM video_details WHERE work_id = $1', [id])
+        await client.query('UPDATE works SET kind = $1 WHERE id = $2', [nextKind, id])
+        work.kind = nextKind
+        db.modelDetails = db.modelDetails.filter((d) => d.workId !== id)
+        db.videoDetails = db.videoDetails.filter((d) => d.workId !== id)
+        if (work.kind === 'model') {
+          const details = { workId: id, software: [], processNotes: '', modelMediaId: null, turntableMediaId: null, polyCount: null, textured: false, externalUrl: null }
+          await insertRow(client, 'model_details', details, ['workId', ...MODEL_FIELDS])
+          db.modelDetails.push(details)
+        }
+        if (work.kind === 'video') {
+          const details = { workId: id, mediaId: null, duration: null, audioCleared: false, relatedWorkId: null }
+          await insertRow(client, 'video_details', details, ['workId', ...VIDEO_FIELDS])
+          db.videoDetails.push(details)
+        }
+      }
 
       Object.assign(work, pick(changes, WORK_FIELDS), { updatedBy: request.admin.id })
       validateWork(db, work)

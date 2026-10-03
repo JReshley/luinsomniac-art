@@ -8,7 +8,7 @@
 // brought back (setWorkStatus(id, 'draft')).
 
 import { ApiError, findRow, logActivity, mutate, newId, query } from './db.js'
-import { KINDS, STATUSES, publishBlockers } from './shared.js'
+import { is3dCategory, KINDS, STATUSES, publishBlockers } from './shared.js'
 import { resolveMediaUrls } from './media.js'
 import { slugify } from './seed.js'
 
@@ -31,6 +31,10 @@ export function workProblems(db, work) {
   const add = (message) => problems.push({ level: 'missing', message })
 
   if (!work.coverMediaId) add('No cover image')
+  // Saved as an artwork before 3D categories made works 3D models: the 3D
+  // Showcase lists it, but it has no 3D details until it's saved again.
+  const category = db.categories?.find((item) => item.id === work.categoryId)
+  if (work.kind === 'artwork' && is3dCategory(category)) add('In a 3D category: open and save it to add its 3D details')
   if (work.kind === 'model' && !db.modelDetails.find((d) => d.workId === work.id)?.modelMediaId) add('No .glb file')
   if (work.kind === 'video' && !db.videoDetails.find((d) => d.workId === work.id)?.mediaId) add('No YouTube link')
 
@@ -123,6 +127,7 @@ export async function createWork(input) {
       ...pick(input, WORK_FIELDS),
     }
     if (!input.slug?.trim()) work.slug = uniqueSlug(db, slugify(work.title ?? ''), work.id)
+    if (work.kind === 'artwork' && is3dCategory(db.categories.find((item) => item.id === work.categoryId))) work.kind = 'model'
 
     validateWork(db, work)
     db.works.push(work)
@@ -144,13 +149,26 @@ export async function createWork(input) {
   }).then(resolveMediaUrls)
 }
 
-// changes: any WORK_FIELDS, plus `model` / `video` (merged into the details)
-// and `gallery` (replaces the gallery, in that order). A work's kind
-// can't change: make a new work instead.
+// changes: any WORK_FIELDS, plus `kind` (changes the type: the old type's
+// details are dropped and the new type's start empty), `model` / `video`
+// (merged into the details) and `gallery` (replaces the gallery, in order).
 export async function updateWork(id, changes) {
   return mutate((db, ctx) => {
     const work = findRow(db.works, id, 'work')
     const before = { ...work }
+
+    // The type asked for, unless the category makes it a 3D model.
+    let nextKind = changes.kind ?? work.kind
+    const nextCategoryId = changes.categoryId !== undefined ? changes.categoryId : work.categoryId
+    if (nextKind === 'artwork' && is3dCategory(db.categories.find((item) => item.id === nextCategoryId))) nextKind = 'model'
+    if (nextKind !== work.kind) {
+      if (!KINDS.includes(nextKind)) throw new ApiError('invalid', 'Pick a type: artwork, 3D model or video.', { field: 'kind' })
+      db.modelDetails = db.modelDetails.filter((d) => d.workId !== id)
+      db.videoDetails = db.videoDetails.filter((d) => d.workId !== id)
+      work.kind = nextKind
+      if (work.kind === 'model') db.modelDetails.push({ workId: id, software: [], processNotes: '', modelMediaId: null, turntableMediaId: null, polyCount: null, textured: false, externalUrl: null })
+      if (work.kind === 'video') db.videoDetails.push({ workId: id, mediaId: null, duration: null, audioCleared: false, relatedWorkId: null })
+    }
 
     Object.assign(work, pick(changes, WORK_FIELDS), { updatedAt: ctx.now, updatedBy: ctx.actorId })
     validateWork(db, work)

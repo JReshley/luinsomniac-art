@@ -9,8 +9,11 @@ import { youtubeId } from '../../lib/publicWork.js'
 // appear when it has more than one.
 
 export default function ModelStage({ model }) {
+  // The 3D view needs a .glb. Without one it's left out, unless there's
+  // nothing else to show, when it stands in with "on its way".
+  const hasOthers = Boolean(model.turntableUrl || model.posterUrl || model.gallery.length)
   const views = [
-    { id: 'model', label: '3D model' },
+    (model.modelUrl || !hasOthers) && { id: 'model', label: '3D model' },
     model.turntableUrl && { id: 'turntable', label: 'Turntable', thumb: model.turntableUrl },
     model.posterUrl && { id: 'poster', label: 'Poster', thumb: model.posterUrl },
     ...model.gallery.map((item, index) => ({
@@ -21,11 +24,12 @@ export default function ModelStage({ model }) {
     })),
   ].filter(Boolean)
 
-  const [viewId, setViewId] = useState('model')
+  const [viewId, setViewId] = useState(views[0].id)
   const current = views.find((view) => view.id === viewId) ?? views[0]
 
-  // A different model may not have the view that was open, so start over.
-  useEffect(() => setViewId('model'), [model.id])
+  // A different model may not have the view that was open, so start over on
+  // its first one.
+  useEffect(() => setViewId(views[0].id), [model.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-1.5">

@@ -360,6 +360,18 @@ CREATE TABLE IF NOT EXISTS activity_log (
 CREATE INDEX IF NOT EXISTS activity_log_created_at_idx ON activity_log (created_at DESC);
 CREATE INDEX IF NOT EXISTS activity_log_entity_idx     ON activity_log (entity, entity_id, created_at DESC);
 
+-- Works in a 3D category are 3D models (the API applies this on every save).
+-- These bring rows saved before that rule into line, and give any 3D model
+-- missing its details row an empty one. Safe to run again: they change
+-- nothing once the rows agree.
+UPDATE works SET kind = 'model'
+WHERE kind = 'artwork'
+  AND category_id IN (SELECT id FROM categories WHERE (name || ' ' || slug) ~* '(^|[^a-z0-9])3d([^a-z0-9]|$)');
+
+INSERT INTO model_details (work_id)
+SELECT id FROM works
+WHERE kind = 'model' AND NOT EXISTS (SELECT 1 FROM model_details WHERE model_details.work_id = works.id);
+
 -- Lock the tables from Supabase's own data API ---------------------------------
 -- Supabase publishes every table through a REST API that anyone holding the
 -- public (anon) key can call. Row-level security with no policies turns that

@@ -19,7 +19,7 @@ const call = (name) => async (...args) => (await backend)[name](...args)
 
 export { ApiError } from './errors.js'
 export { useApi } from './useApi.js'
-export { KINDS, STATUSES, SETTING_KEYS, STORAGE_LIMIT_BYTES, publishBlockers, formatBytes } from './shared.js'
+export { KINDS, STATUSES, SETTING_KEYS, STORAGE_LIMIT_BYTES, publishBlockers, formatBytes, is3dCategory } from './shared.js'
 export { MAX_WIDTH as MAX_IMAGE_WIDTH } from './images.js'
 
 export const listWorks = call('listWorks')

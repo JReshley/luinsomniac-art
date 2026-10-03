@@ -6,6 +6,12 @@
 import { ApiError } from './errors.js'
 
 export const KINDS = ['artwork', 'model', 'video']
+
+// A category about 3D work ("3D", "3D props"…), by its name or slug. Works in
+// one are 3D models: saving an artwork into one makes it a 3D model, and the
+// 3D Showcase lists them, so a 3D piece can't be left out of it.
+// The same rule as client/src/api/shared.js.
+export const is3dCategory = (category) => /(^|[^a-z0-9])3d([^a-z0-9]|$)/i.test(`${category?.name ?? ''} ${category?.slug ?? ''}`)
 export const STATUSES = ['draft', 'ready', 'published', 'archived']
 
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
@@ -38,6 +44,10 @@ export function workProblems(db, work) {
   const add = (message) => problems.push({ level: 'missing', message })
 
   if (!work.coverMediaId) add('No cover image')
+  // Saved as an artwork before 3D categories made works 3D models: the 3D
+  // Showcase lists it, but it has no 3D details until it's saved again.
+  const category = db.categories?.find((item) => item.id === work.categoryId)
+  if (work.kind === 'artwork' && is3dCategory(category)) add('In a 3D category: open and save it to add its 3D details')
   if (work.kind === 'model' && !db.modelDetails.find((d) => d.workId === work.id)?.modelMediaId) add('No .glb file')
   if (work.kind === 'video' && !db.videoDetails.find((d) => d.workId === work.id)?.mediaId) add('No YouTube link')
 

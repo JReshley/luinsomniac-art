@@ -50,7 +50,9 @@ export function toCard(work) {
 // One 3D model as the showcase uses it. The gallery's images and videos come
 // along as extra views.
 export function toModel(work) {
-  const { cover, model } = work
+  const { cover } = work
+  // Every 3D model has a details row; this only guards the page if one doesn't.
+  const model = work.model ?? { software: [], processNotes: '', polyCount: null, textured: false, externalUrl: null, file: null, turntable: null }
   return {
     id: work.slug,
     title: work.title,

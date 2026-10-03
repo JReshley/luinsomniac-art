@@ -3,6 +3,7 @@ import { pool } from '../db/pool.js'
 import { ApiError, route } from '../errors.js'
 import { resolveMediaUrls } from '../mediaFiles.js'
 import { loadDb } from '../rows.js'
+import { is3dCategory } from '../workRules.js'
 
 // What the public site reads. No sign-in needed, so every field is picked from
 // an allowlist rather than copied and stripped: only published works, and only
@@ -46,7 +47,7 @@ function publicWork(db, work) {
 
   return {
     slug: work.slug,
-    kind: work.kind,
+    kind: shownKind(db, work),
     title: work.title,
     year: work.year,
     category: category ? { name: category.name, slug: category.slug } : null,
@@ -77,6 +78,12 @@ function publicWork(db, work) {
   }
 }
 
+// How the public site treats a work: an artwork in a 3D category is a 3D
+// model (saved before that rule, or not saved since), so the 3D Showcase
+// lists it. It has no 3D details until it's saved again.
+const shownKind = (db, work) =>
+  work.kind === 'artwork' && is3dCategory(db.categories.find((item) => item.id === work.categoryId)) ? 'model' : work.kind
+
 const published = (db) => db.works.filter((work) => work.status === 'published').sort((a, b) => a.sortOrder - b.sortOrder)
 
 export function publicRoutes({ storage }) {
@@ -96,7 +103,7 @@ export function publicRoutes({ storage }) {
     const db = await loadDb(pool, TABLES)
     const categoryId = category && db.categories.find((item) => item.slug === category)?.id
     const works = published(db)
-      .filter((work) => (!kind || work.kind === kind) && (!category || work.categoryId === categoryId) && (featured !== 'true' || work.featured))
+      .filter((work) => (!kind || shownKind(db, work) === kind) && (!category || work.categoryId === categoryId) && (featured !== 'true' || work.featured))
       .map((work) => publicWork(db, work))
     response.json(withUrls(works))
   }))
