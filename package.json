@@ -1,0 +1,6 @@
+{
+  "name": "luinsomniac-art",
+  "private": true,
+  "type": "module",
+  "description": "Root package.json for Vercel. The client and server each have their own package.json and install their own dependencies (see vercel.json)."
+}

@@ -1,13 +1,6 @@
-import { createApp } from './app.js'
-import { createSupabaseServices } from './supabase.js'
+import { buildApp } from './bootstrap.js'
 
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173')
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean)
-
-const { verifyToken, storage } = createSupabaseServices()
-const app = createApp({ verifyToken, storage, allowedOrigins })
+const { app, allowedOrigins } = buildApp()
 
 // The host chooses the port and tells you through PORT. Hardcoding 3000 is the
 // commonest reason a first deploy is marked unhealthy and killed.

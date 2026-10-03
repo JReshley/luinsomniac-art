@@ -62,22 +62,56 @@ VITE_SUPABASE_ANON_KEY=<anon key>
 
 Restart `npm run dev`, open http://localhost:5173/admin and sign in.
 
-## 5. Deploy
+## 5. Deploy on Vercel (site and API in one project)
 
-- **API host** (Render or similar): root `server/`, start command `npm start`.
-  Environment: everything in `server/.env` (with `NODE_ENV=production`), and
-  `CORS_ORIGINS` set to the site's origin, like `https://<you>.github.io`.
-- **GitHub repository variables** (Settings → Secrets and variables → Actions →
-  Variables): `VITE_USE_MOCK_API=false`, `VITE_API_BASE_URL`,
-  `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. Push to `main` to rebuild.
+`vercel.json` at the repo root builds the client and runs the Express app as a
+Vercel function (`api/index.js`), so the site and its API share one address and
+there is no CORS to configure.
+
+1. **Vercel → your project → Settings → General → Root Directory:** clear it
+   (the repo root, not `client`). Leave Framework Preset as Other; the build
+   settings come from `vercel.json`.
+2. **Settings → Environment Variables** (Production, and Preview if you use it):
+
+   | Name | Value |
+   |---|---|
+   | `VITE_USE_MOCK_API` | `false` |
+   | `VITE_API_BASE_URL` | leave unset: the API is on the same address |
+   | `VITE_SUPABASE_URL` | the project URL |
+   | `VITE_SUPABASE_ANON_KEY` | the anon / publishable key (never the secret one) |
+   | `DATABASE_URL` | the **Transaction pooler** string (port 6543), with the password filled in |
+   | `DB_POOL_MAX` | `1` |
+   | `SUPABASE_URL` | the project URL |
+   | `SUPABASE_SERVICE_ROLE_KEY` | the service_role / secret key |
+   | `SUPABASE_BUCKET` | `media` |
+   | `NODE_ENV` | `production` |
+
+   `VITE_*` values are baked into the public site; the others stay on the
+   server. Only the anon key goes in a `VITE_` variable.
+3. **Supabase → Authentication → URL Configuration:** Site URL
+   `https://<your-site>.vercel.app`, and add
+   `https://<your-site>.vercel.app/admin/reset-password` to Redirect URLs.
+4. **Redeploy** (Deployments → ⋯ → Redeploy). Variables only apply to new
+   builds.
+5. Check `https://<your-site>.vercel.app/readyz` says `{"ok":true,"db":"up"}`,
+   then sign in at `/admin/login`.
+
+Serverless runs many short-lived copies of the API, so use the transaction
+pooler and a pool of 1 each, or the database runs out of connections.
+
+Prefer a separate API host (Render and similar)? Run `server/` with `npm start`,
+give it the `server/.env` variables plus `CORS_ORIGINS=<the site's origin>`, and
+set `VITE_API_BASE_URL` to its address.
 
 ## If something doesn't work
 
 - **"Sign in isn't set up"** — the two `VITE_SUPABASE_*` values are missing.
 - **Signs in, then "doesn't match an admin account"** — the user isn't in the
   `admins` table, or the UID was copied wrong.
-- **Requests fail with a CORS error** — the site's origin isn't in
-  `CORS_ORIGINS` on the API host (no trailing slash).
+- **Requests fail with a CORS error** — only with a separate API host: the
+  site's origin isn't in `CORS_ORIGINS` there (no trailing slash).
+- **`/api/...` returns the site's home page or a 404 on Vercel** — Root
+  Directory is still `client`, so the root `vercel.json` and `api/` are ignored.
 - **Uploads fail** — the bucket isn't named `media`, or `SUPABASE_BUCKET` is set
   to something else.
 - **Password-reset link goes to the wrong page** — the redirect URL isn't in
