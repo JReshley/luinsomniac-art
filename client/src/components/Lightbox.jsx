@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import IconButton from './IconButton.jsx'
 import Placeholder from './Placeholder.jsx'
 import PlayIcon from './PlayIcon.jsx'
+import { FALLBACK_RATIO, youtubeId } from '../lib/publicWork.js'
 
 // Full-screen view of one work, built on the native <dialog>. The browser
 // handles Esc to close, keeps focus inside while open, and returns focus to
@@ -28,6 +29,8 @@ export default function Lightbox({ work, onClose, onPrev, onNext }) {
   }
 
   const isVideo = work?.type === 'video'
+  const videoId = isVideo ? youtubeId(work.videoUrl) : null
+  const ratio = work?.width && work?.height ? `${work.width} / ${work.height}` : FALLBACK_RATIO
 
   return (
     <dialog
@@ -49,17 +52,27 @@ export default function Lightbox({ work, onClose, onPrev, onNext }) {
             <div>
               <h2 id="lightbox-title" className="font-medium">{work.title}</h2>
               <p className="font-mono text-small text-bg/65 uppercase">
-                {work.category} · {work.year}
+                {[work.category, work.year].filter(Boolean).join(' · ')}
               </p>
             </div>
             <IconButton label="Close" onClick={onClose} onDark>✕</IconButton>
           </div>
 
-          {work.imageUrl ? (
+          {videoId ? (
+            // No autoplay: it starts when the visitor presses play.
+            <iframe
+              key={work.id}
+              src={`https://www.youtube-nocookie.com/embed/${videoId}`}
+              title={work.title}
+              allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+              allowFullScreen
+              className="aspect-video max-h-[70vh] w-full rounded-lg border-0 bg-ink motion-safe:animate-fade-in"
+            />
+          ) : work.imageUrl ? (
             <img
               key={work.id}
               src={work.imageUrl}
-              alt={`${work.title}, ${work.category}`}
+              alt={work.alt || `${work.title}, ${work.category}`}
               className="max-h-[70vh] w-full rounded-lg object-contain motion-safe:animate-fade-in"
             />
           ) : (
@@ -68,7 +81,7 @@ export default function Lightbox({ work, onClose, onPrev, onNext }) {
               label={work.title}
               dark={isVideo}
               className={`max-h-[70vh] w-full rounded-lg motion-safe:animate-fade-in ${isVideo ? 'border border-bg/10' : 'bg-surface'}`}
-              style={{ aspectRatio: `${work.width} / ${work.height}` }}
+              style={{ aspectRatio: ratio }}
             >
               {isVideo ? <PlayIcon size="lg" onDark /> : undefined}
             </Placeholder>

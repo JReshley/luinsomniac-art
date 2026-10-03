@@ -16,6 +16,9 @@ import { resolveMediaUrls } from './media.js'
 const publicMedia = (media) =>
   media
     ? {
+        // The mock finds an uploaded file by this (media.js urlsFor). Not
+        // private: it's only an opaque id.
+        id: media.id,
         source: media.source,
         kind: media.kind,
         storagePathOrUrl: media.storagePathOrUrl,

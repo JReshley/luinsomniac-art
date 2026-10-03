@@ -1,19 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
 import { BUNNIES } from '../../data/stickers.js'
+import { youtubeId } from '../../lib/publicWork.js'
 
 // The big preview on the 3D Showcase (Figma node 23:1599). It shows one view
-// of the model at a time: the interactive .glb, its turntable video, or its
-// poster. The thumbnails underneath switch between the views the model has,
-// and only appear when it has more than one.
+// of the model at a time: the interactive .glb, its turntable (an animated
+// image), its poster, or one of the images and YouTube videos in its gallery.
+// The thumbnails underneath switch between the views the model has, and only
+// appear when it has more than one.
 
 export default function ModelStage({ model }) {
   const views = [
     { id: 'model', label: '3D model' },
-    model.turntableUrl && { id: 'turntable', label: 'Turntable' },
-    model.posterUrl && { id: 'poster', label: 'Poster' },
+    model.turntableUrl && { id: 'turntable', label: 'Turntable', thumb: model.turntableUrl },
+    model.posterUrl && { id: 'poster', label: 'Poster', thumb: model.posterUrl },
+    ...model.gallery.map((item, index) => ({
+      id: `gallery-${index}`,
+      item,
+      label: item.caption || item.alt || `${item.kind === 'video' ? 'Video' : 'Image'} ${index + 1}`,
+      thumb: item.thumbnailUrl,
+    })),
   ].filter(Boolean)
 
   const [viewId, setViewId] = useState('model')
+  const current = views.find((view) => view.id === viewId) ?? views[0]
 
   // A different model may not have the view that was open, so start over.
   useEffect(() => setViewId('model'), [model.id])
@@ -23,18 +32,20 @@ export default function ModelStage({ model }) {
       <div className="aspect-[4/3] w-full overflow-hidden rounded-lg border border-ink/10 bg-ink/5 md:aspect-[16/10]">
         {/* Keyed, so swapping model or view fades the new one in. */}
         <div key={`${model.id}-${viewId}`} className="size-full motion-safe:animate-fade-in">
-          <View model={model} viewId={viewId} />
+          <View model={model} view={current} />
         </div>
       </div>
 
-      {viewId === 'model' && model.modelUrl && (
+      {current.item?.caption && <p className="text-caption text-ink/65">{current.item.caption}</p>}
+
+      {current.id === 'model' && model.modelUrl && (
         <p className="font-mono text-small text-ink/65 uppercase">Drag to rotate · scroll or pinch to zoom</p>
       )}
 
       {views.length > 1 && (
         <div className="grid grid-cols-4 gap-1.5" role="group" aria-label="Views">
           {views.map((view) => {
-            const active = view.id === viewId
+            const active = view.id === current.id
             return (
               <button
                 key={view.id}
@@ -46,8 +57,15 @@ export default function ModelStage({ model }) {
                   active ? 'border-2 border-primary text-primary shadow-[0_4px_6px_rgb(4_96_153/0.15)]' : 'border border-ink/10'
                 }`}
               >
-                {view.id === 'poster' ? (
-                  <img src={model.posterUrl} alt="" className="size-full object-cover" />
+                {view.thumb ? (
+                  <span className="relative block size-full">
+                    <img src={view.thumb} alt="" loading="lazy" className="size-full object-cover" />
+                    {view.item?.kind === 'video' && (
+                      <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
+                        <span className="flex h-3 w-4 items-center justify-center rounded-sm bg-ink/70 text-small text-bg">▶</span>
+                      </span>
+                    )}
+                  </span>
                 ) : (
                   <span className="px-1 text-center">{view.label}</span>
                 )}
@@ -60,24 +78,29 @@ export default function ModelStage({ model }) {
   )
 }
 
-function View({ model, viewId }) {
-  if (viewId === 'turntable') {
+function View({ model, view }) {
+  if (view.item?.kind === 'video') {
+    const id = youtubeId(view.item.url)
     return (
-      <video
-        key={model.turntableUrl}
-        src={model.turntableUrl}
-        poster={model.posterUrl ?? undefined}
-        aria-label={`Turntable of ${model.title}`}
-        controls
-        loop
-        muted
-        playsInline
-        className="size-full bg-ink object-contain"
+      <iframe
+        src={`https://www.youtube-nocookie.com/embed/${id}`}
+        title={view.label}
+        allow="accelerometer; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+        allowFullScreen
+        className="size-full border-0 bg-ink"
       />
     )
   }
 
-  if (viewId === 'poster') {
+  if (view.item) {
+    return <img src={view.item.url} alt={view.item.alt || view.item.caption} className="size-full object-contain" />
+  }
+
+  if (view.id === 'turntable') {
+    return <img src={model.turntableUrl} alt={`Turntable of ${model.title}`} className="size-full object-contain" />
+  }
+
+  if (view.id === 'poster') {
     return <img src={model.posterUrl} alt={model.alt} className="size-full object-cover" />
   }
 

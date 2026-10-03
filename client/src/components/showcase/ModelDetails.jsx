@@ -1,6 +1,7 @@
 import { forwardRef } from 'react'
 import Button from '../Button.jsx'
-import { formatTris } from '../../data/models.js'
+import Chip from '../Chip.jsx'
+import { formatTris } from '../../lib/publicWork.js'
 
 // The facts panel beside the preview on the 3D Showcase (Figma node 23:1611).
 // From lg up it sticks below the header while the preview scrolls.
@@ -9,11 +10,12 @@ import { formatTris } from '../../data/models.js'
 // different model is picked from the grid.
 
 const ModelDetails = forwardRef(function ModelDetails({ model }, titleRef) {
+  // A spec the admin left blank isn't listed, rather than shown as "null".
   const specs = [
-    { label: 'Software', value: model.software.join(', ') },
-    { label: 'Poly count', value: `${formatTris(model.polyCount)} tris` },
+    model.software.length > 0 && { label: 'Software', value: model.software.join(', ') },
+    model.polyCount != null && { label: 'Poly count', value: `${formatTris(model.polyCount)} tris` },
     { label: 'Textured', value: model.textured ? 'Yes' : 'No' },
-  ]
+  ].filter(Boolean)
 
   const external = externalLink(model.externalUrl)
 
@@ -23,7 +25,7 @@ const ModelDetails = forwardRef(function ModelDetails({ model }, titleRef) {
         {model.title}
       </h2>
       <p className="font-mono text-small text-primary uppercase">
-        {model.type} · {model.year}
+        {[model.category, model.year].filter(Boolean).join(' · ')}
       </p>
 
       <dl className="mt-1.5 flex flex-col gap-1">
@@ -36,6 +38,16 @@ const ModelDetails = forwardRef(function ModelDetails({ model }, titleRef) {
       </dl>
 
       <p className="mt-1.5 text-caption text-ink/65">{model.description}</p>
+
+      {model.tags.length > 0 && (
+        <ul className="mt-1 flex flex-wrap gap-0.5" aria-label="Tags">
+          {model.tags.map((tag) => (
+            <li key={tag}>
+              <Chip className="px-1.5 py-0.5">{tag}</Chip>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {model.processNotes && (
         <details className="group mt-1 text-caption">

@@ -1,17 +1,12 @@
 import PeekButton from './PeekButton.jsx'
 import SocialIcon from './SocialIcon.jsx'
-import { EMAIL, SOCIALS } from '../data/contact.js'
+import { useSite } from './SiteContent.jsx'
 import DisplayTitle from './DisplayTitle.jsx'
 import { BUNNIES } from '../data/stickers.js'
 
-// Email first, then the profiles, as on the About page. Only the profiles
-// open in a new tab.
-const CONTACTS = [
-  { id: 'email', label: EMAIL, href: `mailto:${EMAIL}` },
-  ...SOCIALS.map((social) => ({ ...social, external: true })),
-]
-
 export default function Footer() {
+  const { email, contacts } = useSite()
+
   return (
     <footer className="bg-ink px-2 py-6 md:px-3 lg:px-5 lg:py-8 **:focus-visible:outline-accent" id="contact">
       {/* Centred on phones, where everything stacks into one column. From md up
@@ -33,7 +28,7 @@ export default function Footer() {
               size="5rem"
               wrapperClassName="mt-2 flex w-full md:w-auto"
               variant="accent"
-              href={`mailto:${EMAIL}`}
+              href={`mailto:${email}`}
               className="w-full max-md:py-2 md:w-auto"
             >
               Let&rsquo;s collaborate
@@ -47,7 +42,7 @@ export default function Footer() {
           <div className="flex flex-col items-center gap-1.5 border-t border-bg/10 pt-4 md:items-start md:border-0 md:pt-0">
             <h3 id="footer-contact" className="font-mono text-small text-bg/65 uppercase">Contact</h3>
             <ul className="flex gap-1.5" aria-labelledby="footer-contact">
-              {CONTACTS.map((contact) => (
+              {contacts.map((contact) => (
                 <li key={contact.id}>
                   <a
                     href={contact.href}

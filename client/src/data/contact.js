@@ -1,5 +1,7 @@
-// Where to reach Lui. Shared by the footer and the About page so the address
-// and profile links only need updating in one place.
+// Where to reach Lui, as bundled with the site. These are the fallback: the
+// footer and About page show the admin's Links settings (components/SiteContent.jsx)
+// and use these only until they load, or if they can't. They also seed the mock
+// database (api/seed.js).
 
 export const EMAIL = 'luinsomniac@gmail.com'
 

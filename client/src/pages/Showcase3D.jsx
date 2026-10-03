@@ -1,6 +1,7 @@
-import { useRef } from 'react'
+import { useMemo, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { PUBLISHED_MODELS, formatTris } from '../data/models.js'
+import { listPublishedWorks, useApi } from '../api/index.js'
+import { formatTris, toModel } from '../lib/publicWork.js'
 import SectionHeader from '../components/SectionHeader.jsx'
 import WorkCard from '../components/WorkCard.jsx'
 import ModelDetails from '../components/showcase/ModelDetails.jsx'
@@ -18,8 +19,11 @@ export default function Showcase3D() {
   const layoutRef = useRef(null)
   const titleRef = useRef(null)
 
-  const model = PUBLISHED_MODELS.find((m) => m.id === searchParams.get('model')) ?? PUBLISHED_MODELS[0]
-  const others = PUBLISHED_MODELS.filter((m) => m.id !== model?.id)
+  const { data, error } = useApi(() => listPublishedWorks({ kind: 'model' }), [])
+  const models = useMemo(() => (data ?? []).map(toModel), [data])
+
+  const model = models.find((m) => m.id === searchParams.get('model')) ?? models[0]
+  const others = models.filter((m) => m.id !== model?.id)
 
   // Picking a card swaps the model at the top, so bring the viewer back into
   // view and move focus to the new title for keyboard and screen reader users.
@@ -50,8 +54,8 @@ export default function Showcase3D() {
                 {others.map((other) => (
                   <li key={other.id} className="hang-in">
                     <WorkCard
-                      work={{ ...other, type: 'image', width: 4, height: 3, imageUrl: other.posterUrl }}
-                      meta={`${formatTris(other.polyCount)} tris`}
+                      work={{ ...other, type: 'image', width: null, height: null, imageUrl: other.posterUrl }}
+                      meta={other.polyCount == null ? other.category : `${formatTris(other.polyCount)} tris`}
                       onOpen={() => open(other.id)}
                     />
                   </li>
@@ -61,9 +65,16 @@ export default function Showcase3D() {
           )}
         </>
       ) : (
-        <p className="mt-2.5 rounded-lg border border-ink/10 bg-surface p-3 text-ink/65">
-          No models are on display yet. Check back soon.
-        </p>
+        // Nothing to say until the models have arrived, or it would claim the
+        // shelf is empty while still loading.
+        data && (
+          <p className="mt-2.5 rounded-lg border border-ink/10 bg-surface p-3 text-ink/65">
+            No models are on display yet. Check back soon.
+          </p>
+        )
+      )}
+      {error && !data && (
+        <p role="alert" className="mt-2.5 text-ink/80">The models couldn’t load. Reload the page to try again.</p>
       )}
     </main>
   )

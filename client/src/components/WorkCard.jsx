@@ -1,5 +1,6 @@
 import Placeholder from './Placeholder.jsx'
 import PlayIcon from './PlayIcon.jsx'
+import { FALLBACK_RATIO } from '../lib/publicWork.js'
 
 // One piece of work in a grid. Clicking it calls onOpen, which shows the Lightbox.
 // The small label on the right is the work's category unless `meta` replaces it
@@ -24,7 +25,9 @@ export default function WorkCard({ work, meta = work.category, onOpen }) {
 
   // The ratio comes from data, so it is set inline: Tailwind only generates
   // classes it can see written out in the source, never ones built at runtime.
-  const ratio = { aspectRatio: `${work.width} / ${work.height}` }
+  // A picture whose size isn't known (a Drive link) keeps its own shape; a
+  // placeholder has none, so it gets 4:3.
+  const ratio = work.width && work.height ? { aspectRatio: `${work.width} / ${work.height}` } : undefined
 
   return (
     <button
@@ -33,12 +36,20 @@ export default function WorkCard({ work, meta = work.category, onOpen }) {
       className={`group block w-full cursor-pointer overflow-hidden rounded-lg border border-ink/10 bg-surface text-left text-ink transition-[color,background-color,border-color,translate,rotate,box-shadow] duration-300 ease-spring ${DARK_ON_HOVER.card}`}
     >
       {work.imageUrl ? (
-        <img src={work.imageUrl} alt="" loading="lazy" className="w-full object-cover" style={ratio} />
+        <span className="relative block">
+          <img src={work.imageUrl} alt="" loading="lazy" className="w-full object-cover" style={ratio} />
+          {/* The picture is the video's cover, so it needs the badge too. */}
+          {isVideo && (
+            <span aria-hidden="true" className="absolute inset-0 flex items-center justify-center">
+              <span className="flex h-5 w-6.5 items-center justify-center rounded-sm bg-ink/70 text-bg">▶</span>
+            </span>
+          )}
+        </span>
       ) : (
         <Placeholder
           label={work.title}
           decorative
-          style={ratio}
+          style={ratio ?? { aspectRatio: FALLBACK_RATIO }}
           className={`transition-colors ${DARK_ON_HOVER.placeholder}`}
         >
           {isVideo ? <PlayIcon className={DARK_ON_HOVER.play} /> : undefined}

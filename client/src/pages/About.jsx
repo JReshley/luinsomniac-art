@@ -2,7 +2,7 @@ import Chip from '../components/Chip.jsx'
 import Placeholder from '../components/Placeholder.jsx'
 import SectionHeader from '../components/SectionHeader.jsx'
 import SocialIcon from '../components/SocialIcon.jsx'
-import { EMAIL, SOCIALS } from '../data/contact.js'
+import { useSite } from '../components/SiteContent.jsx'
 import DisplayTitle from '../components/DisplayTitle.jsx'
 import SlapSticker from '../components/SlapSticker.jsx'
 import { BUNNIES } from '../data/stickers.js'
@@ -22,13 +22,9 @@ const EXPERIENCE = [
 
 const SOFTWARE = ['Blender', 'Photoshop', 'After Effects', 'Krita', 'Audition']
 
-// Email first, then the profiles. Only the profiles open in a new tab.
-const CONTACTS = [
-  { id: 'email', label: EMAIL, href: `mailto:${EMAIL}` },
-  ...SOCIALS.map((social) => ({ ...social, external: true })),
-]
-
 export default function About() {
+  const { contacts, portrait } = useSite()
+
   return (
     <main id="main" className="mx-auto flex max-w-5xl flex-col gap-3 px-2 pt-4 pb-7 md:gap-4 md:px-3 lg:px-5 lg:pt-6.5 lg:pb-9.5">
       <DisplayTitle text="About" entrance className="font-display text-display text-primary" />
@@ -38,7 +34,11 @@ export default function About() {
           {/* "Violence is an option", slapped on the corner of the photo like
               a sticker on a laptop lid. */}
           <div className="relative w-[120px] shrink-0 md:w-full">
-            <Placeholder label="Portrait photo" className="aspect-[3/4] w-full rounded-lg" />
+            {portrait ? (
+              <img src={portrait.url} alt={portrait.altText || 'Portrait of Lui'} className="aspect-[3/4] w-full rounded-lg object-cover" />
+            ) : (
+              <Placeholder label="Portrait photo" className="aspect-[3/4] w-full rounded-lg" />
+            )}
             <SlapSticker
               sticker={BUNNIES.violence}
               tilt="9deg"
@@ -49,7 +49,7 @@ export default function About() {
           <div className="flex flex-col gap-1">
             <h2 id="about-contact" className="font-mono text-small text-ink/65 uppercase">Contact</h2>
             <ul className="flex flex-wrap gap-1" aria-labelledby="about-contact">
-              {CONTACTS.map((contact) => (
+              {contacts.map((contact) => (
                 <li key={contact.id}>
                   <a
                     href={contact.href}

@@ -2,12 +2,13 @@ import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Header from './components/Header.jsx'
 import Footer from './components/Footer.jsx'
+import { SiteProvider, useSite } from './components/SiteContent.jsx'
 
 // The frame around every page. The pages themselves are routes in main.jsx;
 // <Outlet /> is where the current one renders.
 export default function App() {
   return (
-    <>
+    <SiteProvider>
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:top-1 focus:left-1 focus:z-20 focus:rounded-sm focus:bg-surface focus:px-2 focus:py-1"
@@ -23,7 +24,7 @@ export default function App() {
       <Outlet />
 
       <Footer />
-    </>
+    </SiteProvider>
   )
 }
 
@@ -49,22 +50,22 @@ function ScrollToTop() {
 
 // index.html only sets one <title>, so without this every page shares it and
 // browser tabs, history and screen readers can't tell the pages apart.
-const SITE = 'Luinsomniac Art'
-const PAGE_TITLES = {
-  '/': SITE,
-  '/museum': `The Museum · ${SITE}`,
-  '/showcase': `3D Showcase · ${SITE}`,
-  '/about': `About · ${SITE}`,
-}
+const pageTitles = (site) => ({
+  '/': site,
+  '/museum': `The Museum · ${site}`,
+  '/showcase': `3D Showcase · ${site}`,
+  '/about': `About · ${site}`,
+})
 
 function PageTitle() {
   const { pathname } = useLocation()
+  const { displayName } = useSite()
 
   useEffect(() => {
     // The router treats "/museum/" as "/museum", so the lookup does too.
     const path = pathname.replace(/\/+$/, '') || '/'
-    document.title = PAGE_TITLES[path] ?? `Page not found · ${SITE}`
-  }, [pathname])
+    document.title = pageTitles(displayName)[path] ?? `Page not found · ${displayName}`
+  }, [pathname, displayName])
 
   return null
 }

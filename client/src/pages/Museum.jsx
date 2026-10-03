@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { WORKS } from '../data/works.js'
+import { useMemo, useState } from 'react'
+import { listPublicCategories, listPublishedWorks, useApi } from '../api/index.js'
+import { toCard } from '../lib/publicWork.js'
 import Button from '../components/Button.jsx'
 import Lightbox from '../components/Lightbox.jsx'
 import WorkCard from '../components/WorkCard.jsx'
@@ -9,13 +10,6 @@ import { CATS } from '../data/stickers.js'
 
 const ALL = 'All'
 
-// Filter order from the wireframe. A category with no works is left out.
-const CATEGORY_ORDER = ['3D', 'Props', 'Background', 'Character', '2D art', 'Animation']
-const FILTERS = [ALL, ...CATEGORY_ORDER.filter((category) => WORKS.some((work) => work.category === category))]
-
-// Newest first. sort() is stable, so works from the same year keep their data order.
-const SORTED = [...WORKS].sort((a, b) => b.year - a.year)
-
 // How many works show before "Load more" (and how many each click adds).
 const PAGE_SIZE = 8
 
@@ -23,12 +17,21 @@ const PAGE_SIZE = 8
 const END_CAT = CATS.find((cat) => cat.id === 'tilapia').src
 
 export default function Museum() {
+  const { data: works, error } = useApi(() => listPublishedWorks(), [])
+  // In the order set in the admin, and only categories with published work.
+  const { data: categories } = useApi(listPublicCategories, [])
+
+  // Newest first. sort() is stable, so works from the same year keep the order
+  // set in the admin. A work with no year goes last.
+  const sorted = useMemo(() => (works ?? []).map(toCard).sort((a, b) => (b.year ?? 0) - (a.year ?? 0)), [works])
+  const filters = [ALL, ...(categories ?? []).map((category) => category.name)]
+
   const [filter, setFilter] = useState(ALL)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   // Index into `shown` of the work in the Lightbox, or null when it is closed.
   const [openIndex, setOpenIndex] = useState(null)
 
-  const matching = filter === ALL ? SORTED : SORTED.filter((work) => work.category === filter)
+  const matching = filter === ALL ? sorted : sorted.filter((work) => work.category === filter)
   const shown = matching.slice(0, visibleCount)
 
   function changeFilter(next) {
@@ -48,12 +51,15 @@ export default function Museum() {
         <p className="text-ink/65">Wander the halls and see what's on display.</p>
       </div>
 
-      <FilterBar options={FILTERS} active={filter} onChange={changeFilter} />
+      <FilterBar options={filters} active={filter} onChange={changeFilter} />
 
       {/* Announces the new count when a filter or "Load more" changes the grid. */}
       <p aria-live="polite" className="sr-only">
         Showing {shown.length} of {matching.length} works
       </p>
+
+      {error && !works && <p role="alert" className="text-ink/80">The works couldn’t load. Reload the page to try again.</p>}
+      {works?.length === 0 && <p className="text-ink/65">Nothing is on display yet. Check back soon.</p>}
 
       {/* CSS columns give the masonry layout: cards fill each column top to bottom. */}
       <div className="columns-2 gap-2 md:columns-3 lg:columns-4 lg:gap-2.5">
@@ -64,7 +70,7 @@ export default function Museum() {
         ))}
       </div>
 
-      {visibleCount < matching.length ? (
+      {!works ? null : visibleCount < matching.length ? (
         <div className="flex justify-center pt-1">
           <Button variant="outline" onClick={() => setVisibleCount((count) => count + PAGE_SIZE)} className="w-full md:w-auto">
             Load more

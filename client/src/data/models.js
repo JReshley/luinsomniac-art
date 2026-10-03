@@ -1,6 +1,7 @@
-// Sample 3D models for the 3D Showcase until the backend serves them. The
-// fields follow the showcase spreadsheet's columns, so the API response can
-// keep the same names.
+// The 3D models the site started with. The public pages no longer read this
+// file: it is only the mock database's starting data (api/seed.js), and goes
+// when the real database takes over in phase 6. Fields follow the showcase
+// spreadsheet's columns.
 //
 //   type          what kind of piece it is ("Prop modeling", "Environment"…)
 //   software      the tools used, in the order they were used
@@ -96,13 +97,3 @@ export const MODELS = [
     status: 'published',
   },
 ]
-
-// What the showcase lists: published models only, in display order.
-export const PUBLISHED_MODELS = MODELS.filter((model) => model.status === 'published').sort((a, b) => a.order - b.order)
-
-// 184000 -> "184k", 1250000 -> "1.3M". Small counts stay as they are.
-export function formatTris(count) {
-  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
-  if (count >= 1000) return `${Math.round(count / 1000)}k`
-  return String(count)
-}

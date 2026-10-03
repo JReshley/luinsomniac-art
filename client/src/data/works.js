@@ -1,5 +1,6 @@
-// Sample works until the backend serves them. Keep the same field names in the
-// API response so components don't need to change when it switches over.
+// The works the site started with. The public pages no longer read this file:
+// it is only the mock database's starting data (api/seed.js), and goes when the
+// real database takes over in phase 6. Field names are the old API's.
 //
 //   type      "image" or "video"
 //   width,    the asset's pixel size; cards use it for their shape

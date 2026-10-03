@@ -3,6 +3,7 @@ import PeekButton from '../PeekButton.jsx'
 import Chip from '../Chip.jsx'
 import WavingLucas from './WavingLucas.jsx'
 import { BUNNIES } from '../../data/stickers.js'
+import { useSite } from '../SiteContent.jsx'
 
 const HEADLINE = ['I', 'build', 'worlds', 'in']
 
@@ -20,7 +21,15 @@ function replay(event) {
   }
 }
 
+// Used until the admin's own text arrives, and when it's never been set.
+const STATUS = 'Open for commissions'
+const INTRO =
+  'Multimedia artist working across prop modeling, background design, character creation and story-driven animation — from first thumbnail to final render.'
+
 export default function Hero() {
+  const site = useSite()
+  const status = site.text('home.hero.status', STATUS)
+
   return (
     <section className="mx-auto grid max-w-page items-end gap-3 px-2 pt-3 pb-6 md:gap-5 md:py-6 md:grid-cols-[1.35fr_0.65fr] md:px-3 lg:px-5 lg:py-8">
       {/* The site's opening moment: the words rise in turn, "3D"
@@ -28,7 +37,8 @@ export default function Hero() {
           under "2D" (styles.css: .rise, .turntable, .marker). --i is each
           piece's place in the sequence. */}
       <div className="flex flex-col items-start gap-2.5">
-        <span className="rise inline-flex" style={{ '--i': 0 }} onMouseEnter={replay}>
+        {/* Blanking the text in the admin takes the badge off. */}
+        {status && <span className="rise inline-flex" style={{ '--i': 0 }} onMouseEnter={replay}>
           <Chip variant="outline">
             {/* A status light: it pings three times, then holds steady. The fill
                 mode keeps the finished ping around (its last frame is invisible)
@@ -37,9 +47,9 @@ export default function Hero() {
               <span className="absolute inset-0 rounded-full bg-primary motion-safe:animate-ping motion-safe:[animation-iteration-count:3] motion-safe:[animation-fill-mode:both]" />
               <span className="relative size-0.75 rounded-full bg-primary" />
             </span>
-            Open for commissions
+            {status}
           </Chip>
-        </span>
+        </span>}
 
         <h1 className="text-display font-bold tracking-tight">
           {HEADLINE.map((word, i) => (
@@ -64,8 +74,7 @@ export default function Hero() {
         </h1>
 
         <p className="rise max-w-[36rem] text-ink/65" style={{ '--i': 8 }}>
-          Multimedia artist working across prop modeling, background design, character creation and
-          story-driven animation — from first thumbnail to final render.
+          {site.text('home.hero.intro', INTRO)}
         </p>
 
         <div className="rise flex w-full flex-col gap-1.5 pt-1.5 md:w-auto md:flex-row" style={{ '--i': 9 }}>

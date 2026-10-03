@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import logoMark from '../assets/logo-mark.png'
+import { useSite } from './SiteContent.jsx'
 import PeekButton from './PeekButton.jsx'
 import { BUNNIES } from '../data/stickers.js'
 
@@ -21,6 +22,7 @@ const NAV_LINKS = [
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { pathname } = useLocation()
+  const site = useSite()
 
   // Close the menu whenever the page changes, including via Back/Forward.
   useEffect(() => setMenuOpen(false), [pathname])
@@ -53,9 +55,9 @@ export default function Header() {
     <header className="sticky top-0 z-10 border-b border-ink/10 bg-bg/92 backdrop-blur-sm [view-transition-name:site-header]">
       <div className="flex items-center justify-between gap-2 px-2 py-1.5 md:px-3 lg:px-5 lg:py-2">
         <Link className="group flex items-center gap-1.5 no-underline md:gap-2" to="/" viewTransition>
-          <img className="block h-[34px] w-[45px] object-contain motion-safe:group-hover:animate-boing" src={logoMark} alt="" width="45" height="34" />
+          <img className="block h-[34px] w-[45px] object-contain motion-safe:group-hover:animate-boing" src={site.logo?.url ?? logoMark} alt="" width="45" height="34" />
           <span className="flex flex-col">
-            <span className="font-medium leading-[1.4] tracking-widest text-ink">LUINSOMNIAC ART</span>
+            <span className="font-medium leading-[1.4] tracking-widest text-ink uppercase">{site.displayName}</span>
             <span className="font-mono text-small text-ink/65">3D · 2D · ANIMATION</span>
           </span>
         </Link>
