@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import AdminPageHeader from '../AdminPageHeader.jsx'
 import { useSession } from '../auth.js'
 import { Button, LoadError, RefreshStatus, Skeleton } from '../ui.jsx'
-import { formatBytes, getDashboard, useApi } from '../../api/index.js'
+import { formatBytes, getDashboard, getSettings, useApi } from '../../api/index.js'
 
 // The first page after signing in. The to-do list comes first, since that's
 // what an admin opens it for; the counts, storage and recent edits sit beside
@@ -11,13 +11,22 @@ import { formatBytes, getDashboard, useApi } from '../../api/index.js'
 const KIND_LABELS = { artwork: 'artwork', model: '3D model', video: 'video' }
 const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`
 
+// Places on the public site that show a placeholder until a file is chosen in
+// Site settings: [setting, what it is, where it shows, settings section].
+const SITE_SLOTS = [
+  ['home_reel', 'Prop samples video', 'home page', 'home-page'],
+  ['portrait', 'Portrait', 'About page and home page', 'about-page'],
+]
+
 // How many flagged works to list before linking to the rest.
 const ATTENTION_LIMIT = 6
 
 export default function Dashboard() {
   const session = useSession()
   const api = useApi(getDashboard, [])
+  const settingsApi = useApi(getSettings, [])
   const { data, error } = api
+  const emptySlots = settingsApi.data ? SITE_SLOTS.filter(([key]) => !settingsApi.data[key]?.mediaId) : []
 
   const actions = <Button href="/admin/works/new">Add work</Button>
 
@@ -40,7 +49,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <AdminPageHeader title={`Hi, ${session.name}`} actions={actions} status={<RefreshStatus sources={[api]} />}>
+      <AdminPageHeader title={`Hi, ${session.name}`} actions={actions} status={<RefreshStatus sources={[api, settingsApi]} />}>
         {plural(total, 'work')} on file: {Object.entries(byKind).map(([kind, count]) => plural(count, KIND_LABELS[kind])).join(', ')}.
       </AdminPageHeader>
 
@@ -90,6 +99,24 @@ export default function Dashboard() {
         </Panel>
 
         <div className="flex flex-col gap-3">
+          {emptySlots.length > 0 && (
+            <Panel title="Placeholders on the site" count={emptySlots.length}>
+              <ul className="flex flex-col">
+                {emptySlots.map(([key, label, where, section]) => (
+                  <li key={key}>
+                    <Link
+                      to={`/admin/settings#${section}`}
+                      className="-mx-1 flex min-h-[2.75rem] flex-col justify-center rounded-sm px-1 no-underline hover:bg-ink/5"
+                    >
+                      <span className="font-medium text-primary">Add the {label.toLowerCase()} →</span>
+                      <span className="text-caption text-ink/65">Shows a placeholder on the {where}.</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
+
           <Panel title="Works">
             <ul className="grid grid-cols-3 gap-1">
               {counts.map(([status, label, count]) => (

@@ -101,4 +101,5 @@ INSERT INTO settings (key, value, media_id) VALUES
   ('display_name', 'Luinsomniac Art', NULL),
   ('logo', NULL, NULL),
   ('icon', NULL, NULL),
-  ('portrait', NULL, NULL);
+  ('portrait', NULL, NULL),
+  ('home_reel', NULL, NULL);

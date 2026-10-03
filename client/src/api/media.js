@@ -149,7 +149,7 @@ function usage(db, id) {
     if (d.turntableMediaId === id) uses.push({ workId: d.workId, title: title(d.workId), role: 'turntable' })
   }
   for (const d of db.videoDetails) if (d.mediaId === id) uses.push({ workId: d.workId, title: title(d.workId), role: 'video' })
-  for (const setting of db.settings) if (setting.mediaId === id) uses.push({ setting: setting.key, role: 'brand' })
+  for (const setting of db.settings) if (setting.mediaId === id) uses.push({ setting: setting.key, role: setting.key })
   return uses
 }
 

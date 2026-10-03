@@ -4,9 +4,12 @@
 export const KINDS = ['artwork', 'model', 'video']
 export const STATUSES = ['draft', 'ready', 'published', 'archived']
 
-// The keys the Brand and Links screens edit. A null value or media means the
-// site uses the copy bundled in the repo (the logo in src/assets, and so on).
-export const SETTING_KEYS = ['contact_email', 'display_name', 'logo', 'icon', 'portrait']
+// The keys Site settings edits. A null value or media means the site uses
+// the copy bundled in the repo (the logo in src/assets, and so on), or a
+// placeholder where there's nothing bundled (the portrait, the home reel).
+export const SETTING_KEYS = ['contact_email', 'display_name', 'logo', 'icon', 'portrait', 'home_reel']
+// Settings that point at a file, and the kind of file each takes.
+export const FILE_SETTINGS = { logo: 'image', icon: 'image', portrait: 'image', home_reel: 'video' }
 
 // Supabase's free plan includes 1 GB of file storage.
 export const STORAGE_LIMIT_BYTES = 1024 ** 3

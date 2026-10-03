@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   createSocialLink,
   deleteSocialLink,
@@ -38,20 +39,43 @@ import {
 } from '../ui.jsx'
 
 // Everything site-wide that isn't a work, on one page (page pattern:
-// Settings), in the order a visitor meets it: the brand in the header, the
-// home page's opening text, then the ways to get in touch. Each section saves
+// Settings), grouped by where it shows: the brand across the site, then the
+// home page, the About page, and the ways to get in touch. Each section saves
 // on its own, and keeps unsaved edits in this browser until it does.
+//
+// The settings and the media library are loaded once here and shared, so the
+// sections don't each ask for them.
 
 const SECTIONS = [
   ['brand', 'Brand'],
-  ['home-text', 'Home page text'],
+  ['home-page', 'Home page'],
+  ['about-page', 'About page'],
   ['contact', 'Contact'],
 ]
 
 export default function SiteSettings() {
+  const settingsApi = useApi(getSettings, [])
+  const libraryApi = useApi(() => listMedia(), [])
+  const textApi = useApi(listSiteText, [])
+  const library = libraryApi.data ?? []
+  const { hash } = useLocation()
+
+  // A link from elsewhere ("Add the portrait →") names a section; go to it once
+  // the sections have their content, so it lands in the right place.
+  const ready = settingsApi.data !== undefined && textApi.data !== undefined
+  // After the frame that draws them, so the router's own scroll-to-top on
+  // navigation doesn't undo it.
+  useEffect(() => {
+    if (!ready || !hash) return
+    const frame = requestAnimationFrame(() => document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' }))
+    return () => cancelAnimationFrame(frame)
+  }, [ready, hash])
+
   return (
     <>
-      <AdminPageHeader title="Site settings">The name, pictures, home page text and contact details used across the site.</AdminPageHeader>
+      <AdminPageHeader title="Site settings" status={<RefreshStatus sources={[settingsApi, libraryApi, textApi]} />}>
+        The name, pictures, video, text and contact details used across the site.
+      </AdminPageHeader>
 
       <div className="flex flex-col gap-3 lg:grid lg:grid-cols-[12rem_minmax(0,44rem)] lg:items-start lg:gap-4">
         {/* Beside the sections and sticky on wide screens; a short list above them on narrow ones. */}
@@ -68,13 +92,35 @@ export default function SiteSettings() {
         </nav>
 
         <div className="flex flex-col gap-4">
-          <Brand />
-          <HomeText />
-          <Contact />
+          <Section id="brand" title="Brand" description="Used across the whole site. Leave an image empty to use the one that comes with the site.">
+            <Loaded api={settingsApi} what="brand settings">{(settings) => <BrandForm settings={settings} library={library} />}</Loaded>
+          </Section>
+
+          <Section id="home-page" title="Home page" description="Leave a text field empty to use the text that comes with the site.">
+            <Loaded api={settingsApi} also={textApi} what="home page settings">
+              {(settings, entries) => <HomePageForm settings={settings} entries={entries} library={library} />}
+            </Loaded>
+          </Section>
+
+          <Section id="about-page" title="About page">
+            <Loaded api={settingsApi} what="About page settings">{(settings) => <AboutPageForm settings={settings} library={library} />}</Loaded>
+          </Section>
+
+          <Contact settings={settingsApi.data} />
         </div>
       </div>
     </>
   )
+}
+
+// A section's form once its data is here: a skeleton until then, or what
+// failed. `also` is a second source the form needs.
+function Loaded({ api, also, what, children }) {
+  const error = api.error ?? also?.error
+  if (api.data === undefined || (also && also.data === undefined)) {
+    return error ? <LoadError what={what} error={error} /> : <Skeleton rows={2} />
+  }
+  return children(api.data, also?.data)
 }
 
 function Section({ id, title, description, children }) {
@@ -107,159 +153,203 @@ function useInitial(key, saved) {
   return { initial: draft?.value ?? saved, draftAt: draft?.at ?? null }
 }
 
-// --- Brand ------------------------------------------------------------------
+// The file a setting points at, or null. A setting added after this data was
+// made has no row yet, which means the same.
+const fileOf = (settings, key) => settings[key]?.mediaId ?? null
 
-// An image left empty means the site uses the copy bundled with it, so nothing
-// breaks if a setting is cleared.
-const IMAGES = [
-  ['logo', 'Logo', 'The mark in the site header.'],
-  ['icon', 'Browser tab icon', 'A small square image.'],
-  ['portrait', 'Portrait', 'The picture on the About page.'],
-]
-
-function Brand() {
-  const { data: settings, error } = useApi(getSettings, [])
-  const { data: library = [] } = useApi(() => listMedia({ kind: 'image' }), [])
-
-  return (
-    <Section id="brand" title="Brand" description="Leave an image empty to use the one that comes with the site.">
-      {settings ? <BrandForm settings={settings} library={library} /> : error ? <LoadError what="brand settings" error={error} /> : <Skeleton rows={3} />}
-    </Section>
-  )
-}
-
-function BrandForm({ settings, library }) {
-  const fromServer = {
-    display_name: settings.display_name.value ?? '',
-    ...Object.fromEntries(IMAGES.map(([key]) => [key, settings[key].mediaId])),
-  }
-  const { initial, draftAt } = useInitial('brand', fromServer)
+// The state every settings form here shares: the values (from a kept draft if
+// there is one), what's saved, and the save status.
+function useSettingsForm(draftKey, fromServer) {
+  const { initial, draftAt } = useInitial(draftKey, fromServer)
   const [form, setForm] = useState(initial)
   const [saved, setSaved] = useState(fromServer)
   const [restoredAt, setRestoredAt] = useState(draftAt)
   const [state, setState] = useState({ tone: 'info', text: '' })
   const [busy, setBusy] = useState(false)
-  const validation = useValidation({ display_name: rules.required('Enter the artist name; the header can’t be blank.') })
   const dirty = JSON.stringify(form) !== JSON.stringify(saved)
-  useDraft('brand', form, dirty)
+  useDraft(draftKey, form, dirty)
 
-  const update = (name, value) => {
-    setForm((prev) => ({ ...prev, [name]: value }))
-    validation.clear(name)
-    setState({ tone: 'info', text: '' })
+  return {
+    form,
+    dirty,
+    busy,
+    state,
+    update(name, value) {
+      setForm((prev) => ({ ...prev, [name]: value }))
+      setState({ tone: 'info', text: '' })
+    },
+    // Runs the save; on success the form is clean and the kept draft is gone.
+    // `onError` returns true when it has shown the error itself (under a field).
+    async save(job, onError) {
+      setBusy(true)
+      try {
+        await job(form, saved)
+        setSaved(form)
+        setRestoredAt(null)
+        setState({ tone: 'info', text: 'Saved.' })
+      } catch (err) {
+        if (!onError?.(err)) setState({ tone: 'error', text: err.message })
+      } finally {
+        setBusy(false)
+      }
+    },
+    draftNotice: <DraftNotice at={restoredAt} onDiscard={() => { clearDraft(draftKey); setForm(saved); setRestoredAt(null) }} />,
+    errorNotice: state.tone === 'error' && <Notice tone="error">{state.text}</Notice>,
   }
+}
 
-  async function save(event) {
+// --- Brand ------------------------------------------------------------------
+
+// An image left empty means the site uses the copy bundled with it, so nothing
+// breaks if a setting is cleared.
+const BRAND_IMAGES = [
+  ['logo', 'Logo', 'The mark in the site header.'],
+  ['icon', 'Browser tab icon', 'A small square image.'],
+]
+
+function BrandForm({ settings, library }) {
+  const fromServer = {
+    display_name: settings.display_name?.value ?? '',
+    ...Object.fromEntries(BRAND_IMAGES.map(([key]) => [key, fileOf(settings, key)])),
+  }
+  const f = useSettingsForm('brand', fromServer)
+  const validation = useValidation({ display_name: rules.required('Enter the artist name; the header can’t be blank.') })
+
+  function submit(event) {
     event.preventDefault()
-    const first = validation.checkAll(form)
+    const first = validation.checkAll(f.form)
     if (first) return focusField(first)
-    setBusy(true)
-    try {
-      await updateSettings({
-        display_name: { value: form.display_name },
-        ...Object.fromEntries(IMAGES.map(([key]) => [key, { mediaId: form[key] }])),
-      })
-      setSaved(form)
-      setRestoredAt(null)
-      setState({ tone: 'info', text: 'Saved.' })
-    } catch (err) {
-      if (err.field) validation.set(err.field, err.message)
-      else setState({ tone: 'error', text: err.message })
-    } finally {
-      setBusy(false)
-    }
+    f.save(
+      (form) =>
+        updateSettings({
+          display_name: { value: form.display_name },
+          ...Object.fromEntries(BRAND_IMAGES.map(([key]) => [key, { mediaId: form[key] }])),
+        }),
+      (err) => {
+        if (!err.field) return false
+        validation.set(err.field, err.message)
+        return true
+      }
+    )
   }
 
   return (
-    <form onSubmit={save} noValidate className="flex flex-col gap-2 rounded-lg border border-ink/10 bg-surface p-2">
-      <DraftNotice at={restoredAt} onDiscard={() => { clearDraft('brand'); setForm(saved); setRestoredAt(null) }} />
+    <form onSubmit={submit} noValidate className="flex flex-col gap-2 rounded-lg border border-ink/10 bg-surface p-2">
+      {f.draftNotice}
       <TextField
         label="Artist name"
         name="display_name"
         required
         hint="Shown in the header, the footer and the browser tab."
-        value={form.display_name}
-        onChange={(event) => update('display_name', event.target.value)}
-        onBlur={validation.blur('display_name', form.display_name)}
+        value={f.form.display_name}
+        onChange={(event) => { f.update('display_name', event.target.value); validation.clear('display_name') }}
+        onBlur={validation.blur('display_name', f.form.display_name)}
         error={validation.errors.display_name}
       />
-      {IMAGES.map(([key, label, hint]) => (
+      {BRAND_IMAGES.map(([key, label, hint]) => (
         <MediaField
           key={key}
           label={label}
           kind="image"
           hint={hint}
-          mediaId={form[key]}
+          mediaId={f.form[key]}
           library={library}
           error={validation.errors[key]}
-          onChange={(media) => update(key, media?.id ?? null)}
+          onChange={(media) => { f.update(key, media?.id ?? null); validation.clear(key) }}
         />
       ))}
-      {state.tone === 'error' && <Notice tone="error">{state.text}</Notice>}
-      <SaveRow busy={busy} label="Save brand" state={state} dirty={dirty} />
+      {f.errorNotice}
+      <SaveRow busy={f.busy} label="Save brand" state={f.state} dirty={f.dirty} />
     </form>
   )
 }
 
-// --- Home page text -----------------------------------------------------------
+// --- Home page --------------------------------------------------------------
 
-// The pieces of text the public pages read, by the key they read them under.
-// Only these do anything, so they're the only ones offered.
+// The pieces of text the home page reads, by the key it reads them under. Only
+// these do anything, so they're the only ones offered.
 const HOME_TEXT = [
   ['home.hero.status', 'Availability', 'The short line at the top of the home page, like “Open for commissions”.', 1],
   ['home.hero.intro', 'Introduction', 'The paragraph under the name on the home page.', 4],
 ]
 
-function HomeText() {
-  const { data: entries, error } = useApi(listSiteText, [])
-  return (
-    <Section id="home-text" title="Home page text" description="Leave a field empty to use the text that comes with the site.">
-      {entries ? <HomeTextForm entries={entries} /> : error ? <LoadError what="home page text" error={error} /> : <Skeleton rows={2} />}
-    </Section>
-  )
-}
+function HomePageForm({ settings, entries, library }) {
+  const fromServer = {
+    ...Object.fromEntries(HOME_TEXT.map(([key]) => [key, entries.find((entry) => entry.key === key)?.value ?? ''])),
+    home_reel: fileOf(settings, 'home_reel'),
+  }
+  const f = useSettingsForm('home-page', fromServer)
+  const [reelError, setReelError] = useState('')
 
-function HomeTextForm({ entries }) {
-  const fromServer = Object.fromEntries(HOME_TEXT.map(([key]) => [key, entries.find((entry) => entry.key === key)?.value ?? '']))
-  const { initial, draftAt } = useInitial('home-text', fromServer)
-  const [form, setForm] = useState(initial)
-  const [saved, setSaved] = useState(fromServer)
-  const [restoredAt, setRestoredAt] = useState(draftAt)
-  const [state, setState] = useState({ tone: 'info', text: '' })
-  const [busy, setBusy] = useState(false)
-  const dirty = JSON.stringify(form) !== JSON.stringify(saved)
-  useDraft('home-text', form, dirty)
-
-  async function save(event) {
+  function submit(event) {
     event.preventDefault()
-    setBusy(true)
-    try {
-      for (const [key] of HOME_TEXT) if (form[key] !== saved[key]) await updateSiteText(key, form[key])
-      setSaved(form)
-      setRestoredAt(null)
-      setState({ tone: 'info', text: 'Saved.' })
-    } catch (err) {
-      setState({ tone: 'error', text: err.message })
-    } finally {
-      setBusy(false)
-    }
+    f.save(
+      async (form, saved) => {
+        for (const [key] of HOME_TEXT) if (form[key] !== saved[key]) await updateSiteText(key, form[key])
+        if (form.home_reel !== saved.home_reel) await updateSettings({ home_reel: { mediaId: form.home_reel } })
+      },
+      (err) => {
+        if (err.field !== 'home_reel') return false
+        setReelError(err.message)
+        return true
+      }
+    )
   }
 
   return (
-    <form onSubmit={save} noValidate className="flex flex-col gap-2 rounded-lg border border-ink/10 bg-surface p-2">
-      <DraftNotice at={restoredAt} onDiscard={() => { clearDraft('home-text'); setForm(saved); setRestoredAt(null) }} />
+    <form onSubmit={submit} noValidate className="flex flex-col gap-2 rounded-lg border border-ink/10 bg-surface p-2">
+      {f.draftNotice}
       {HOME_TEXT.map(([key, label, hint, rows]) => {
-        const props = {
-          label,
-          hint,
-          optional: true,
-          value: form[key],
-          onChange: (event) => { setForm((prev) => ({ ...prev, [key]: event.target.value })); setState({ tone: 'info', text: '' }) },
-        }
+        const props = { label, hint, optional: true, value: f.form[key], onChange: (event) => f.update(key, event.target.value) }
         return rows === 1 ? <TextField key={key} {...props} /> : <TextArea key={key} rows={rows} {...props} />
       })}
-      {state.tone === 'error' && <Notice tone="error">{state.text}</Notice>}
-      <SaveRow busy={busy} label="Save text" state={state} dirty={dirty} />
+      <MediaField
+        label="Prop samples video"
+        kind="video"
+        hint="The YouTube video in the Prop Samples section. Empty shows a placeholder there."
+        mediaId={f.form.home_reel}
+        library={library}
+        error={reelError}
+        onChange={(media) => { f.update('home_reel', media?.id ?? null); setReelError('') }}
+      />
+      {f.errorNotice}
+      <SaveRow busy={f.busy} label="Save home page" state={f.state} dirty={f.dirty} />
+    </form>
+  )
+}
+
+// --- About page -------------------------------------------------------------
+
+function AboutPageForm({ settings, library }) {
+  const f = useSettingsForm('about-page', { portrait: fileOf(settings, 'portrait') })
+  const [portraitError, setPortraitError] = useState('')
+
+  function submit(event) {
+    event.preventDefault()
+    f.save(
+      (form) => updateSettings({ portrait: { mediaId: form.portrait } }),
+      (err) => {
+        if (err.field !== 'portrait') return false
+        setPortraitError(err.message)
+        return true
+      }
+    )
+  }
+
+  return (
+    <form onSubmit={submit} noValidate className="flex flex-col gap-2 rounded-lg border border-ink/10 bg-surface p-2">
+      {f.draftNotice}
+      <MediaField
+        label="Portrait"
+        kind="image"
+        hint="The picture of Lui on the About page and in the About section of the home page. Empty shows a placeholder."
+        mediaId={f.form.portrait}
+        library={library}
+        error={portraitError}
+        onChange={(media) => { f.update('portrait', media?.id ?? null); setPortraitError('') }}
+      />
+      {f.errorNotice}
+      <SaveRow busy={f.busy} label="Save About page" state={f.state} dirty={f.dirty} />
     </form>
   )
 }
@@ -271,8 +361,7 @@ const linkRules = {
   url: (value) => (!String(value ?? '').trim() ? 'Paste the address of the profile.' : rules.https(value)),
 }
 
-function Contact() {
-  const { data: settings } = useApi(getSettings, [])
+function Contact({ settings }) {
   const linksApi = useApi(listSocialLinks, [])
   const { data: links, error } = linksApi
   const [toDelete, setToDelete] = useState(null)
@@ -311,7 +400,7 @@ function Contact() {
   return (
     <Section id="contact" title="Contact" description="Shown in the footer and on the About page: the email first, then the links in this order.">
       <div className="flex flex-col gap-2 rounded-lg border border-ink/10 bg-surface p-2">
-        {settings && <EmailForm saved={settings.contact_email.value ?? ''} />}
+        {settings && <EmailForm saved={settings.contact_email?.value ?? ''} />}
 
         <div className="flex flex-col gap-1 border-t border-ink/10 pt-2">
           <div className="flex flex-wrap items-baseline gap-x-2">

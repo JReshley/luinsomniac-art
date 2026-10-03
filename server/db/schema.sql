@@ -278,18 +278,49 @@ CREATE TABLE IF NOT EXISTS social_links (
   sort_order INTEGER NOT NULL DEFAULT 0
 );
 
--- The contact email, display name and the logo, icon and portrait. A null
--- value or media_id means the site uses the copy bundled in the repo.
+-- The contact email, display name, the logo, icon and portrait, and the home
+-- page's Prop Samples video. A null value or media_id means the site uses the
+-- copy bundled in the repo, or a placeholder where nothing is bundled.
 CREATE TABLE IF NOT EXISTS settings (
-  key      TEXT PRIMARY KEY CHECK (key IN ('contact_email', 'display_name', 'logo', 'icon', 'portrait')),
+  key      TEXT PRIMARY KEY,
   value    TEXT,
   media_id UUID REFERENCES media (id) ON DELETE RESTRICT,
-  -- Text settings have no image and image settings have no text.
-  CHECK (key IN ('logo', 'icon', 'portrait') OR media_id IS NULL),
-  CHECK (key NOT IN ('logo', 'icon', 'portrait') OR value IS NULL),
-  CHECK (key <> 'contact_email' OR (value IS NOT NULL AND value ~ '^[^\s@]+@[^\s@]+\.[^\s@]+$')),
-  CHECK (key <> 'display_name' OR (value IS NOT NULL AND length(btrim(value)) > 0))
+  CONSTRAINT settings_key_known CHECK (key IN ('contact_email', 'display_name', 'logo', 'icon', 'portrait', 'home_reel')),
+  -- Text settings have no file and file settings have no text. The API checks
+  -- the kind of file: images for logo, icon and portrait, a YouTube video for
+  -- home_reel (the Prop Samples video on the home page).
+  CONSTRAINT settings_file_keys CHECK (key IN ('logo', 'icon', 'portrait', 'home_reel') OR media_id IS NULL),
+  CONSTRAINT settings_text_keys CHECK (key NOT IN ('logo', 'icon', 'portrait', 'home_reel') OR value IS NULL),
+  CONSTRAINT settings_contact_email_valid CHECK (key <> 'contact_email' OR (value IS NOT NULL AND value ~ '^[^\s@]+@[^\s@]+\.[^\s@]+$')),
+  CONSTRAINT settings_display_name_present CHECK (key <> 'display_name' OR (value IS NOT NULL AND length(btrim(value)) > 0))
 );
+
+-- Upgrades a database made before home_reel existed: its checks were unnamed
+-- and listed only the first five keys. They're swapped for the named ones
+-- above (a no-op on a fresh database), and the new row is added.
+DO $$
+DECLARE
+  old_check RECORD;
+BEGIN
+  FOR old_check IN
+    SELECT conname FROM pg_constraint
+    WHERE conrelid = 'settings'::regclass AND contype = 'c'
+      AND conname NOT IN ('settings_key_known', 'settings_file_keys', 'settings_text_keys', 'settings_contact_email_valid', 'settings_display_name_present')
+  LOOP
+    EXECUTE format('ALTER TABLE settings DROP CONSTRAINT %I', old_check.conname);
+  END LOOP;
+
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'settings'::regclass AND conname = 'settings_key_known') THEN
+    ALTER TABLE settings
+      ADD CONSTRAINT settings_key_known CHECK (key IN ('contact_email', 'display_name', 'logo', 'icon', 'portrait', 'home_reel')),
+      ADD CONSTRAINT settings_file_keys CHECK (key IN ('logo', 'icon', 'portrait', 'home_reel') OR media_id IS NULL),
+      ADD CONSTRAINT settings_text_keys CHECK (key NOT IN ('logo', 'icon', 'portrait', 'home_reel') OR value IS NULL),
+      ADD CONSTRAINT settings_contact_email_valid CHECK (key <> 'contact_email' OR (value IS NOT NULL AND value ~ '^[^\s@]+@[^\s@]+\.[^\s@]+$')),
+      ADD CONSTRAINT settings_display_name_present CHECK (key <> 'display_name' OR (value IS NOT NULL AND length(btrim(value)) > 0));
+  END IF;
+END $$;
+
+INSERT INTO settings (key, value, media_id) VALUES ('home_reel', NULL, NULL) ON CONFLICT (key) DO NOTHING;
 
 -- Activity ---------------------------------------------------------------------
 -- Who changed what, for the dashboard's recent activity and each work's

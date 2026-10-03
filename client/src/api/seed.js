@@ -141,6 +141,7 @@ export function buildSeed(version) {
       { key: 'logo', value: null, mediaId: null },
       { key: 'icon', value: null, mediaId: null },
       { key: 'portrait', value: null, mediaId: null },
+      { key: 'home_reel', value: null, mediaId: null },
     ],
     activityLog: [],
   }

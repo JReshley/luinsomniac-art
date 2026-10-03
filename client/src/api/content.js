@@ -12,7 +12,7 @@
 
 import { ApiError, findRow, logActivity, mutate, newId, query } from './db.js'
 import { resolveMediaUrls } from './media.js'
-import { SETTING_KEYS } from './shared.js'
+import { FILE_SETTINGS, SETTING_KEYS } from './shared.js'
 
 // --- Site text ------------------------------------------------------------
 
@@ -97,8 +97,6 @@ function validateLink(link) {
 
 // --- Settings -------------------------------------------------------------
 
-const IMAGE_SETTINGS = ['logo', 'icon', 'portrait']
-
 // { contact_email: { value, mediaId, media }, ... }
 export async function getSettings() {
   const settings = await query((db) =>
@@ -114,13 +112,15 @@ export function updateSettings(changes) {
   return mutate((db, ctx) => {
     for (const [key, change] of Object.entries(changes)) {
       if (!SETTING_KEYS.includes(key)) throw new ApiError('invalid', `There’s no setting called “${key}”.`, { field: key })
-      const setting = db.settings.find((item) => item.key === key)
+      // Settings added after this browser's data was made aren't stored yet.
+      let setting = db.settings.find((item) => item.key === key)
+      if (!setting) db.settings.push((setting = { key, value: null, mediaId: null }))
 
       if (change.value !== undefined) setting.value = change.value === null ? null : String(change.value).trim()
       if (change.mediaId !== undefined) {
         const media = change.mediaId && findRow(db.media, change.mediaId, 'file')
-        if (media && (!IMAGE_SETTINGS.includes(key) || media.kind !== 'image')) {
-          throw new ApiError('invalid', 'Pick an image for the logo, icon or portrait.', { field: key })
+        if (media && media.kind !== FILE_SETTINGS[key]) {
+          throw new ApiError('invalid', FILE_SETTINGS[key] === 'video' ? 'Pick a YouTube video for this.' : 'Pick an image for this.', { field: key })
         }
         setting.mediaId = change.mediaId || null
       }
@@ -130,9 +130,20 @@ export function updateSettings(changes) {
       }
       if (key === 'display_name' && !setting.value) throw new ApiError('invalid', 'The display name can’t be blank.', { field: key })
     }
-    logActivity(db, ctx, 'update', 'settings', null, `Edited ${Object.keys(changes).map((key) => key.replace('_', ' ')).join(', ')}`)
+    logActivity(db, ctx, 'update', 'settings', null, `Edited ${settingNames(Object.keys(changes))}`)
   })
 }
+
+// How each setting reads in the activity log.
+const SETTING_NAMES = {
+  contact_email: 'the contact email',
+  display_name: 'the artist name',
+  logo: 'the logo',
+  icon: 'the browser tab icon',
+  portrait: 'the portrait',
+  home_reel: 'the prop samples video',
+}
+const settingNames = (keys) => keys.map((key) => SETTING_NAMES[key] ?? key).join(', ')
 
 // --- Helpers --------------------------------------------------------------
 

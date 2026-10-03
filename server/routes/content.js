@@ -15,8 +15,20 @@ const LINK_FIELDS = ['platform', 'handle', 'url', 'visible']
 
 // The keys the Brand and Links screens edit. A null value or media means the
 // site uses the copy bundled in the repo (the logo in src/assets, and so on).
-export const SETTING_KEYS = ['contact_email', 'display_name', 'logo', 'icon', 'portrait']
-const IMAGE_SETTINGS = ['logo', 'icon', 'portrait']
+export const SETTING_KEYS = ['contact_email', 'display_name', 'logo', 'icon', 'portrait', 'home_reel']
+// Settings that point at a file, and the kind of file each takes.
+const FILE_SETTINGS = { logo: 'image', icon: 'image', portrait: 'image', home_reel: 'video' }
+
+// How each setting reads in the activity log.
+const SETTING_NAMES = {
+  contact_email: 'the contact email',
+  display_name: 'the artist name',
+  logo: 'the logo',
+  icon: 'the browser tab icon',
+  portrait: 'the portrait',
+  home_reel: 'the prop samples video',
+}
+const settingNames = (keys) => keys.map((key) => SETTING_NAMES[key] ?? key).join(', ')
 
 export function contentRoutes({ storage }) {
   const router = Router()
@@ -126,14 +138,15 @@ export function contentRoutes({ storage }) {
       const db = await loadDb(client, ['settings', 'media'])
       for (const [key, change] of Object.entries(changes)) {
         if (!SETTING_KEYS.includes(key)) throw new ApiError('invalid', `There’s no setting called “${key}”.`, { field: key })
-        const setting = db.settings.find((item) => item.key === key)
+        // A setting added after the database was seeded has no row yet.
+        const setting = db.settings.find((item) => item.key === key) ?? { key, value: null, mediaId: null }
 
         if (change.value !== undefined) setting.value = change.value === null ? null : String(change.value).trim()
         if (change.mediaId !== undefined) {
           const media = change.mediaId && db.media.find((item) => item.id === change.mediaId)
           if (change.mediaId && !media) throw new ApiError('not_found', 'That file doesn’t exist. It may have been removed in another tab.', { field: key })
-          if (media && (!IMAGE_SETTINGS.includes(key) || media.kind !== 'image')) {
-            throw new ApiError('invalid', 'Pick an image for the logo, icon or portrait.', { field: key })
+          if (media && media.kind !== FILE_SETTINGS[key]) {
+            throw new ApiError('invalid', FILE_SETTINGS[key] === 'video' ? 'Pick a YouTube video for this.' : 'Pick an image for this.', { field: key })
           }
           setting.mediaId = change.mediaId || null
         }
@@ -143,9 +156,12 @@ export function contentRoutes({ storage }) {
         }
         if (key === 'display_name' && !setting.value) throw new ApiError('invalid', 'The display name can’t be blank.', { field: key })
 
-        await client.query('UPDATE settings SET value = $1, media_id = $2 WHERE key = $3', [setting.value, setting.mediaId, key])
+        await client.query(
+          'INSERT INTO settings (key, value, media_id) VALUES ($1, $2, $3) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, media_id = EXCLUDED.media_id',
+          [key, setting.value, setting.mediaId]
+        )
       }
-      await logActivity(client, request.admin.id, 'update', 'settings', null, `Edited ${Object.keys(changes).map((key) => key.replace('_', ' ')).join(', ')}`)
+      await logActivity(client, request.admin.id, 'update', 'settings', null, `Edited ${settingNames(Object.keys(changes))}`)
     })
     response.status(204).end()
   }))

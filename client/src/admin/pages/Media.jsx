@@ -10,7 +10,16 @@ import { Button, ConfirmDialog, Dialog, EmptyState, LinkButton, ListToolbar, Loa
 // so "Unused" can be linked to. Adding a file opens a slide-over, so the
 // library stays in view.
 
-const ROLE_LABELS = { cover: 'cover', gallery: 'gallery', model: '3D model', turntable: 'turntable', video: 'video', brand: 'brand' }
+const ROLE_LABELS = { cover: 'cover', gallery: 'gallery', model: '3D model', turntable: 'turntable', video: 'video' }
+
+// Files used by Site settings, by setting: what to call the use, and the
+// section of Site settings it's in.
+const SETTING_USES = {
+  logo: ['Logo', 'brand'],
+  icon: ['Browser tab icon', 'brand'],
+  portrait: ['About page portrait', 'about-page'],
+  home_reel: ['Prop samples video', 'home-page'],
+}
 const KIND_OPTIONS = [['image', 'Images'], ['model', '3D models'], ['video', 'Videos']]
 
 // How a file is named in words: its alt text, else what it is and where.
@@ -216,11 +225,14 @@ function MediaCard({ media, onDelete }) {
               <span key={`${use.workId ?? use.setting}-${use.role}`}>
                 {i > 0 && ', '}
                 {use.workId ? (
-                  <Link to={`/admin/works/${use.workId}`} className="text-primary underline-offset-2 hover:underline">{use.title}</Link>
+                  <>
+                    <Link to={`/admin/works/${use.workId}`} className="text-primary underline-offset-2 hover:underline">{use.title}</Link> ({ROLE_LABELS[use.role]})
+                  </>
                 ) : (
-                  <Link to="/admin/settings" className="text-primary underline-offset-2 hover:underline">Site settings</Link>
-                )}{' '}
-                ({ROLE_LABELS[use.role]})
+                  <Link to={`/admin/settings#${SETTING_USES[use.setting]?.[1] ?? ''}`} className="text-primary underline-offset-2 hover:underline">
+                    {SETTING_USES[use.setting]?.[0] ?? 'Site settings'}
+                  </Link>
+                )}
               </span>
             ))}
           </p>

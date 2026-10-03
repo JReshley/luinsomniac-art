@@ -29,6 +29,8 @@ function build(data) {
     logo: data?.logo ?? null,
     icon: data?.icon ?? null,
     portrait: data?.portrait ?? null,
+    // The Prop Samples video on the home page (YouTube), or null for the placeholder.
+    homeReel: data?.homeReel ?? null,
     // A piece of site text, or `fallback` when the admin hasn't set one.
     text: (key, fallback) => text[key] ?? fallback,
     // Email first, then the profiles. Only the profiles open in a new tab.

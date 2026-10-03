@@ -102,8 +102,9 @@ export function listPublicCategories() {
 }
 
 // Everything else the public pages show, in one request:
-// { text: { 'home.hero.intro': '…' }, links: [...visible], email, displayName, logo, icon, portrait }
-// logo, icon and portrait are null when the bundled copy should be used.
+// { text: { 'home.hero.intro': '…' }, links: [...visible], email, displayName, logo, icon, portrait, homeReel }
+// logo, icon and portrait are null when the bundled copy should be used;
+// portrait and homeReel (a YouTube video) show a placeholder when null.
 export async function getSiteContent() {
   const content = await query((db) => {
     const setting = (key) => db.settings.find((item) => item.key === key)
@@ -119,6 +120,7 @@ export async function getSiteContent() {
       logo: image('logo'),
       icon: image('icon'),
       portrait: image('portrait'),
+      homeReel: image('home_reel'),
     }
   })
   return resolveMediaUrls(content)

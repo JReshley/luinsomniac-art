@@ -108,8 +108,9 @@ export function publicRoutes({ storage }) {
   }))
 
   // Everything else the public pages show, in one request:
-  // { text, links: [...visible], email, displayName, logo, icon, portrait }
-  // logo, icon and portrait are null when the bundled copy should be used.
+  // { text, links: [...visible], email, displayName, logo, icon, portrait, homeReel }
+  // logo, icon and portrait are null when the bundled copy should be used;
+  // portrait and homeReel (a YouTube video) show a placeholder when null.
   router.get('/site', route(async (request, response) => {
     const db = await loadDb(pool, TABLES)
     const setting = (key) => db.settings.find((item) => item.key === key)
@@ -126,6 +127,7 @@ export function publicRoutes({ storage }) {
         logo: image('logo'),
         icon: image('icon'),
         portrait: image('portrait'),
+        homeReel: image('home_reel'),
       })
     )
   }))

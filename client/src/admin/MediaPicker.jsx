@@ -52,7 +52,7 @@ export function MediaField({ label, kind, mediaId, library, onChange, hint, erro
         <div className="flex min-w-0 flex-1 flex-col">
           {media ? (
             <>
-              <span className="truncate font-medium">{media.altText || 'Chosen image'}</span>
+              <span className="truncate font-medium">{media.altText || `Chosen ${copy.noun}`}</span>
               <span className="text-small text-ink/65">
                 {SOURCE_LABELS[media.source]}
                 {media.bytes ? ` · ${formatBytes(media.bytes)}` : ''}
