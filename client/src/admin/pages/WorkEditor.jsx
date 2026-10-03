@@ -21,6 +21,10 @@ import { Checkbox, ConfirmDialog, KIND_LABELS, LinkButton, Notice, SelectField, 
 // The full-page editor for one work, new or existing. The route decides which:
 // /admin/works/new?kind=model starts a blank one, /admin/works/:id loads one.
 //
+// There is no slug field. A work's address part is made from its title when it's
+// first saved and never changes after, so renaming a work can't break a link to
+// it. (The data layer makes it when the form sends none.)
+//
 // The form keeps its own copy of the work as plain strings (a tag list is one
 // comma-separated field, a year is text) and turns it into what the API wants
 // on save. Fields the API rejects come back with a `field` name, which is
@@ -85,7 +89,6 @@ const list = (text) => text.split(',').map((item) => item.trim()).filter(Boolean
 function toForm(kind, work) {
   return {
     title: work?.title ?? '',
-    slug: work?.slug ?? '',
     year: work?.year == null ? '' : String(work.year),
     categoryId: work?.categoryId ?? '',
     description: work?.description ?? '',
@@ -120,7 +123,6 @@ function toForm(kind, work) {
 function toInput(kind, form) {
   const input = {
     title: form.title,
-    slug: form.slug,
     year: form.year.trim() === '' ? null : form.year,
     categoryId: form.categoryId || null,
     description: form.description,
@@ -242,7 +244,7 @@ function WorkForm({ kind, work }) {
         navigate(`/admin/works/${created.id}`, { replace: true, viewTransition: false })
       } else {
         const updated = await updateWork(work.id, input)
-        // The server may tidy values (slug, tags), so show what it kept.
+        // The server may tidy values (tags), so show what it kept.
         const next = toForm(kind, updated)
         setForm(next)
         setSaved(JSON.stringify(next))
@@ -291,15 +293,7 @@ function WorkForm({ kind, work }) {
           <div className="flex flex-col gap-3">
             <Section title="Details">
               <TextField label="Title" required autoFocus={isNew} {...field('title')} error={errorFor('title')} />
-              <div className="grid gap-1.5 md:grid-cols-2">
-                <TextField
-                  label="Slug"
-                  hint={isNew ? 'The last part of the address. Left blank, it’s made from the title.' : 'Changing it breaks links to the old address.'}
-                  {...field('slug')}
-                  error={errorFor('slug')}
-                />
-                <TextField label="Year" inputMode="numeric" maxLength={4} {...field('year')} error={errorFor('year')} />
-              </div>
+              <TextField label="Year" inputMode="numeric" maxLength={4} {...field('year')} error={errorFor('year')} />
               <TextArea label="Description" rows={5} {...field('description')} />
               <TextField label="Tags" hint="Separate with commas." {...field('tags')} />
             </Section>
