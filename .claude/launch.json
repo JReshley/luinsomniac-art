@@ -17,6 +17,12 @@
       "port": 5173
     },
     {
+      "name": "server",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "server"],
+      "port": 3000
+    },
+    {
       "name": "client-alt",
       "runtimeExecutable": "npm",
       "runtimeArgs": [

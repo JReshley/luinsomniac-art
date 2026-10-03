@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import IconButton from './IconButton.jsx'
 import Placeholder from './Placeholder.jsx'
 import PlayIcon from './PlayIcon.jsx'
+import ModelViewer from './showcase/ModelViewer.jsx'
 import { FALLBACK_RATIO, youtubeId } from '../lib/publicWork.js'
 
 // Full-screen view of one work, built on the native <dialog>. The browser
@@ -10,9 +11,14 @@ import { FALLBACK_RATIO, youtubeId } from '../lib/publicWork.js'
 //
 // The 3D Showcase uses it for one model's views, so the arrows' names can be
 // changed, and they're left out when there's nothing to step to (no onPrev).
+// Its .glb comes in as a slide of type 'model', which spins here as it does
+// on the page.
 
 export default function Lightbox({ work, onClose, onPrev, onNext, prevLabel = 'Previous work', nextLabel = 'Next work' }) {
   const dialogRef = useRef(null)
+  // Where the last press started, so a drag that spins the model and lets go
+  // over the backdrop isn't taken for a click on it.
+  const pressedRef = useRef(null)
 
   // React renders the <dialog>; showModal() is what actually opens it.
   useEffect(() => {
@@ -22,13 +28,15 @@ export default function Lightbox({ work, onClose, onPrev, onNext, prevLabel = 'P
   }, [work])
 
   function handleKeyDown(event) {
+    // The model uses the arrow keys to turn itself while it has focus.
+    if (event.target.tagName === 'MODEL-VIEWER') return
     if (event.key === 'ArrowLeft') onPrev?.()
     if (event.key === 'ArrowRight') onNext?.()
   }
 
   // A click on the <dialog> itself, not its contents, is a click on the backdrop.
   function handleClick(event) {
-    if (event.target === dialogRef.current) onClose()
+    if (event.target === dialogRef.current && pressedRef.current === dialogRef.current) onClose()
   }
 
   const isVideo = work?.type === 'video'
@@ -41,6 +49,7 @@ export default function Lightbox({ work, onClose, onPrev, onNext, prevLabel = 'P
       onClose={onClose}
       onKeyDown={handleKeyDown}
       onClick={handleClick}
+      onPointerDown={(event) => { pressedRef.current = event.target }}
       aria-labelledby="lightbox-title"
       // Like the other navy bands, the focus ring turns orange: blue on navy
       // fails contrast. The backdrop is near-solid so the page behind doesn't
@@ -61,7 +70,11 @@ export default function Lightbox({ work, onClose, onPrev, onNext, prevLabel = 'P
             <IconButton label="Close" onClick={onClose} onDark>✕</IconButton>
           </div>
 
-          {videoId ? (
+          {work.type === 'model' ? (
+            <div key={work.id} className="h-[70vh] w-full rounded-lg bg-bg/5 motion-safe:animate-fade-in">
+              <ModelViewer modelUrl={work.modelUrl} posterUrl={work.posterUrl} alt={work.alt} onDark />
+            </div>
+          ) : videoId ? (
             // No autoplay: it starts when the visitor presses play.
             <iframe
               key={work.id}

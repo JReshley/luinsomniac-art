@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
-import { BUNNIES } from '../../data/stickers.js'
+import { useEffect, useState } from 'react'
 import { youtubeId } from '../../lib/publicWork.js'
 import Lightbox from '../Lightbox.jsx'
+import ModelViewer, { StillWorking } from './ModelViewer.jsx'
 
 // The big preview on the 3D Showcase (Figma node 23:1599). It shows one view
 // of the model at a time: the interactive .glb, its turntable (an animated
@@ -9,9 +9,9 @@ import Lightbox from '../Lightbox.jsx'
 // The thumbnails underneath switch between the views the model has, and only
 // appear when it has more than one.
 //
-// Every picture and video view can also be opened full screen in the Lightbox
-// (the Full screen button under it), and stepped through there. The .glb view stays in
-// place: it already zooms, and the Lightbox can't spin it.
+// Every view can also be opened full screen in the Lightbox (the Full screen
+// button under it), and stepped through there. The .glb still spins and zooms
+// there; only the "on its way" stand-in has nothing to enlarge.
 
 export default function ModelStage({ model }) {
   // The 3D view needs a .glb. Without one it's left out, unless there's
@@ -41,7 +41,7 @@ export default function ModelStage({ model }) {
 
   // The views the Lightbox can show, as the work-like objects it takes, and the
   // one open in it (or null when it's closed).
-  const slides = views.filter((view) => view.id !== 'model').map((view) => toSlide(model, view))
+  const slides = views.filter((view) => view.id !== 'model' || model.modelUrl).map((view) => toSlide(model, view))
   const [openIndex, setOpenIndex] = useState(null)
   const currentSlide = slides.findIndex((slide) => slide.id === current.id)
   const step = (by) => {
@@ -138,6 +138,9 @@ function toSlide(model, view) {
       ? { ...base, type: 'video', videoUrl: model.turntableUrl }
       : { ...base, type: 'image', imageUrl: model.turntableUrl, alt: `Turntable of ${model.title}` }
   }
+  if (view.id === 'model') {
+    return { ...base, type: 'model', modelUrl: model.modelUrl, posterUrl: model.posterUrl, alt: model.alt, description: 'Drag to rotate · scroll or pinch to zoom' }
+  }
   if (view.id === 'poster') return { ...base, type: 'image', imageUrl: model.posterUrl, alt: model.alt }
   return view.item.kind === 'video'
     ? { ...base, type: 'video', videoUrl: view.item.url }
@@ -195,69 +198,5 @@ function View({ model, view }) {
     return <StillWorking>3D model of {model.title} on its way</StillWorking>
   }
 
-  return <ModelViewer model={model} />
-}
-
-// The bunny asleep on its laptop stands in while a model isn't ready: either
-// it hasn't been exported yet, or the file is still downloading.
-function StillWorking({ children }) {
-  return (
-    <div className="flex size-full flex-col items-center justify-center gap-1.5 p-2 text-center">
-      <img
-        src={BUNNIES.workingHardly.src}
-        alt=""
-        className="w-[min(60%,18rem)] -rotate-3 drop-shadow-[0_6px_6px_rgb(11_21_51/0.2)] motion-safe:animate-pop-in"
-      />
-      <p className="font-mono text-small text-ink/65 uppercase">{children}</p>
-    </div>
-  )
-}
-
-// <model-viewer> is Google's web component for showing a .glb. It brings
-// three.js with it, so it is only downloaded once a model actually needs it,
-// not on every page of the site.
-function ModelViewer({ model }) {
-  const viewerRef = useRef(null)
-  const [loaded, setLoaded] = useState(false)
-
-  useEffect(() => {
-    import('@google/model-viewer')
-  }, [])
-
-  // <model-viewer> fires "load" once the model is on screen. React doesn't
-  // wire events on custom elements, so it is listened for directly.
-  useEffect(() => {
-    const viewer = viewerRef.current
-    const done = () => setLoaded(true)
-    viewer.addEventListener('load', done)
-    return () => viewer.removeEventListener('load', done)
-  }, [model.modelUrl])
-
-  // The turntable spin never stops on its own, so it is left off for anyone
-  // who has asked their system for less motion. They can still drag to rotate.
-  const spin = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-  // A poster already shows while the model downloads; without one, the
-  // sleeping bunny keeps the box from sitting empty.
-  return (
-    <div className="relative size-full">
-      {!loaded && !model.posterUrl && (
-        <div className="absolute inset-0">
-          <StillWorking>Loading the model…</StillWorking>
-        </div>
-      )}
-      <model-viewer
-        ref={viewerRef}
-        key={model.modelUrl}
-        src={model.modelUrl}
-        poster={model.posterUrl ?? undefined}
-        alt={model.alt}
-        camera-controls=""
-        {...(spin && { 'auto-rotate': '' })}
-        touch-action="pan-y"
-        shadow-intensity="1"
-        style={{ width: '100%', height: '100%', '--poster-color': 'transparent' }}
-      />
-    </div>
-  )
+  return <ModelViewer modelUrl={model.modelUrl} posterUrl={model.posterUrl} alt={model.alt} />
 }
