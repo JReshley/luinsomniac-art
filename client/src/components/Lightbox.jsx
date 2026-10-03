@@ -7,8 +7,11 @@ import { FALLBACK_RATIO, youtubeId } from '../lib/publicWork.js'
 // Full-screen view of one work, built on the native <dialog>. The browser
 // handles Esc to close, keeps focus inside while open, and returns focus to
 // the card that opened it.
+//
+// The 3D Showcase uses it for one model's views, so the arrows' names can be
+// changed, and they're left out when there's nothing to step to (no onPrev).
 
-export default function Lightbox({ work, onClose, onPrev, onNext }) {
+export default function Lightbox({ work, onClose, onPrev, onNext, prevLabel = 'Previous work', nextLabel = 'Next work' }) {
   const dialogRef = useRef(null)
 
   // React renders the <dialog>; showModal() is what actually opens it.
@@ -19,8 +22,8 @@ export default function Lightbox({ work, onClose, onPrev, onNext }) {
   }, [work])
 
   function handleKeyDown(event) {
-    if (event.key === 'ArrowLeft') onPrev()
-    if (event.key === 'ArrowRight') onNext()
+    if (event.key === 'ArrowLeft') onPrev?.()
+    if (event.key === 'ArrowRight') onNext?.()
   }
 
   // A click on the <dialog> itself, not its contents, is a click on the backdrop.
@@ -88,9 +91,9 @@ export default function Lightbox({ work, onClose, onPrev, onNext }) {
           )}
 
           <div className="flex items-center justify-between gap-2">
-            <IconButton label="Previous work" onClick={onPrev} onDark>←</IconButton>
+            {onPrev ? <IconButton label={prevLabel} onClick={onPrev} onDark>←</IconButton> : <span />}
             <p className="text-center text-bg/65">{work.description}</p>
-            <IconButton label="Next work" onClick={onNext} onDark>→</IconButton>
+            {onNext ? <IconButton label={nextLabel} onClick={onNext} onDark>→</IconButton> : <span />}
           </div>
         </div>
       )}

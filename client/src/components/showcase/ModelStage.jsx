@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
 import { BUNNIES } from '../../data/stickers.js'
 import { youtubeId } from '../../lib/publicWork.js'
+import Lightbox from '../Lightbox.jsx'
 
 // The big preview on the 3D Showcase (Figma node 23:1599). It shows one view
 // of the model at a time: the interactive .glb, its turntable (an animated
 // image), its poster, or one of the images and YouTube videos in its gallery.
 // The thumbnails underneath switch between the views the model has, and only
 // appear when it has more than one.
+//
+// Every picture and video view can also be opened full screen in the Lightbox
+// (the Full screen button under it), and stepped through there. The .glb view stays in
+// place: it already zooms, and the Lightbox can't spin it.
 
 export default function ModelStage({ model }) {
   // The 3D view needs a .glb. Without one it's left out, unless there's
@@ -34,6 +39,15 @@ export default function ModelStage({ model }) {
   // its first one.
   useEffect(() => setViewId(views[0].id), [model.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // The views the Lightbox can show, as the work-like objects it takes, and the
+  // one open in it (or null when it's closed).
+  const slides = views.filter((view) => view.id !== 'model').map((view) => toSlide(model, view))
+  const [openIndex, setOpenIndex] = useState(null)
+  const currentSlide = slides.findIndex((slide) => slide.id === current.id)
+  const step = (by) => {
+    setOpenIndex((index) => (index + by + slides.length) % slides.length)
+  }
+
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-1.5">
       <div className="aspect-[4/3] w-full overflow-hidden rounded-lg border border-ink/10 bg-ink/5 md:aspect-[16/10]">
@@ -43,7 +57,32 @@ export default function ModelStage({ model }) {
         </div>
       </div>
 
-      {current.item?.caption && <p className="text-caption text-ink/65">{current.item.caption}</p>}
+      <Lightbox
+        work={openIndex === null ? null : slides[openIndex]}
+        onClose={() => setOpenIndex(null)}
+        onPrev={slides.length > 1 ? () => step(-1) : undefined}
+        onNext={slides.length > 1 ? () => step(1) : undefined}
+        prevLabel="Previous view"
+        nextLabel="Next view"
+      />
+
+      {/* Under the view, not over it, so it never covers a video's own controls. */}
+      {(current.item?.caption || currentSlide !== -1) && (
+        <div className="flex items-start justify-between gap-2">
+          <p className="text-caption text-ink/65">{current.item?.caption}</p>
+          {currentSlide !== -1 && (
+            <button
+              type="button"
+              onClick={() => setOpenIndex(currentSlide)}
+              aria-label={`View ${current.label.toLowerCase()} full screen`}
+              className="inline-flex shrink-0 cursor-pointer items-center gap-0.5 py-0.5 text-caption font-medium text-primary underline-offset-2 hover:underline"
+            >
+              <ExpandIcon />
+              Full screen
+            </button>
+          )}
+        </div>
+      )}
 
       {current.id === 'model' && model.modelUrl && (
         <p className="font-mono text-small text-ink/65 uppercase">Drag to rotate · scroll or pinch to zoom</p>
@@ -87,6 +126,30 @@ export default function ModelStage({ model }) {
         </div>
       )}
     </div>
+  )
+}
+
+// One view in the shape the Lightbox shows: the model's title, the view's name
+// where a work shows its category, and its caption underneath.
+function toSlide(model, view) {
+  const base = { id: view.id, title: model.title, category: view.label, year: null, description: view.item?.caption ?? '', width: null, height: null }
+  if (view.id === 'turntable') {
+    return model.turntableVideo
+      ? { ...base, type: 'video', videoUrl: model.turntableUrl }
+      : { ...base, type: 'image', imageUrl: model.turntableUrl, alt: `Turntable of ${model.title}` }
+  }
+  if (view.id === 'poster') return { ...base, type: 'image', imageUrl: model.posterUrl, alt: model.alt }
+  return view.item.kind === 'video'
+    ? { ...base, type: 'video', videoUrl: view.item.url }
+    : { ...base, type: 'image', imageUrl: view.item.url, alt: view.item.alt || view.item.caption || `${model.title}, ${view.label}` }
+}
+
+// Four corner arrows pointing out.
+function ExpandIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 16 16" className="size-2" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10 2h4v4M6 14H2v-4M14 2 9.5 6.5M2 14l4.5-4.5" />
+    </svg>
   )
 }
 
