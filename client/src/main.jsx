@@ -12,21 +12,6 @@ import './styles.css'
 // A route's `lazy` loader for a page module's default export.
 const page = (load) => async () => ({ Component: (await load()).default })
 
-// Admin sections whose screens come in phase 3 of the admin plan. Until then
-// each shows its title and what it will do.
-const adminStub = page(() => import('./admin/pages/AdminStub.jsx'))
-const ADMIN_STUBS = [
-  ['works', 'Works', 'Every artwork, 3D model and video, filtered by kind and status.'],
-  ['works/new', 'New work', 'Pick a kind, fill in the details, and save it as a draft.'],
-  ['works/:id', 'Edit work', 'The full editor for one work: details, media, status and notes.'],
-  ['media', 'Media', 'Upload files, paste a Drive or YouTube link, and find files nothing uses.'],
-  ['categories', 'Categories', 'Rename and reorder the filter chips on the Museum page.'],
-  ['content', 'Site text', 'The headings and paragraphs on the public pages.'],
-  ['links', 'Links', 'Social links and the contact email.'],
-  ['brand', 'Brand', 'The logo, icon, portrait and display name.'],
-  ['*', 'Not found', 'There’s no admin page at this address.'],
-]
-
 // A data router rather than <BrowserRouter>: only a data router honours the
 // `viewTransition` prop on links, which drives the page-change wipe. The pages
 // have to be declared here, not in a <Routes> inside App: links rendered under
@@ -62,7 +47,16 @@ const router = createBrowserRouter(
           lazy: page(() => import('./admin/AdminLayout.jsx')),
           children: [
             { index: true, lazy: page(() => import('./admin/pages/Dashboard.jsx')), handle: { title: 'Dashboard' } },
-            ...ADMIN_STUBS.map(([path, title, note]) => ({ path, lazy: adminStub, handle: { title, note } })),
+            { path: 'works', lazy: page(() => import('./admin/pages/Works.jsx')), handle: { title: 'Works' } },
+            // 'new' is a fixed path, so it wins over the :id one below it.
+            { path: 'works/new', lazy: page(() => import('./admin/pages/WorkEditor.jsx')), handle: { title: 'New work' } },
+            { path: 'works/:id', lazy: page(() => import('./admin/pages/WorkEditor.jsx')), handle: { title: 'Edit work' } },
+            { path: 'media', lazy: page(() => import('./admin/pages/Media.jsx')), handle: { title: 'Media' } },
+            { path: 'categories', lazy: page(() => import('./admin/pages/Categories.jsx')), handle: { title: 'Categories' } },
+            { path: 'content', lazy: page(() => import('./admin/pages/SiteText.jsx')), handle: { title: 'Site text' } },
+            { path: 'links', lazy: page(() => import('./admin/pages/Links.jsx')), handle: { title: 'Links' } },
+            { path: 'brand', lazy: page(() => import('./admin/pages/Brand.jsx')), handle: { title: 'Brand' } },
+            { path: '*', lazy: page(() => import('./admin/pages/AdminStub.jsx')), handle: { title: 'Not found', note: 'There’s no admin page at this address.' } },
           ],
         },
       ],

@@ -65,7 +65,10 @@ function present(db, work) {
     gallery: db.workMedia
       .filter((link) => link.workId === work.id)
       .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((link) => media(link.mediaId))
+      .map((link) => {
+        const item = media(link.mediaId)
+        return item && { ...item, caption: link.caption ?? '' }
+      })
       .filter(Boolean),
     model: work.kind === 'model' ? db.modelDetails.find((d) => d.workId === work.id) ?? null : null,
     video: work.kind === 'video' ? db.videoDetails.find((d) => d.workId === work.id) ?? null : null,
@@ -102,7 +105,7 @@ export async function getWork(id) {
 
 // --- Writing --------------------------------------------------------------
 
-// input: { kind, title, ...any WORK_FIELDS, model: {...}, video: {...}, galleryMediaIds: [...] }
+// input: { kind, title, ...any WORK_FIELDS, model: {...}, video: {...}, gallery: [{ mediaId, caption }] }
 // A blank slug is made from the title, with -2, -3… added if it's taken.
 // New works are drafts unless the input says otherwise.
 export async function createWork(input) {
@@ -147,7 +150,7 @@ export async function createWork(input) {
       db.videoDetails.push(Object.assign(details, pick(input.video ?? {}, VIDEO_FIELDS)))
       validateVideo(db, details)
     }
-    if (input.galleryMediaIds) setGallery(db, work.id, input.galleryMediaIds)
+    if (input.gallery) setGallery(db, work.id, input.gallery)
 
     logActivity(db, ctx, 'create', 'work', work.id, `Added “${work.title}”`)
     return present(db, work)
@@ -155,7 +158,7 @@ export async function createWork(input) {
 }
 
 // changes: any WORK_FIELDS, plus `model` / `video` (merged into the details)
-// and `galleryMediaIds` (replaces the gallery, in that order). A work's kind
+// and `gallery` (replaces the gallery, in that order). A work's kind
 // can't change: make a new work instead.
 export async function updateWork(id, changes) {
   return mutate((db, ctx) => {
@@ -173,7 +176,7 @@ export async function updateWork(id, changes) {
       const details = db.videoDetails.find((d) => d.workId === id)
       validateVideo(db, Object.assign(details, pick(changes.video, VIDEO_FIELDS)))
     }
-    if (changes.galleryMediaIds) setGallery(db, id, changes.galleryMediaIds)
+    if (changes.gallery) setGallery(db, id, changes.gallery)
 
     logActivity(db, ctx, activityAction(before, work), 'work', id, activitySummary(before, work))
     return present(db, work)
@@ -270,12 +273,22 @@ function validateVideo(db, details) {
   details.audioCleared = Boolean(details.audioCleared)
 }
 
-function setGallery(db, workId, mediaIds) {
-  for (const id of mediaIds) {
-    if (!db.media.some((media) => media.id === id)) invalid('galleryMediaIds', 'One of the gallery files no longer exists.')
+// The gallery is an ordered list of images and YouTube videos, with an optional
+// caption on each, for any kind of work. 3D models can't go in it: the model
+// has its own slot. Each file appears once.
+function setGallery(db, workId, items) {
+  const seen = new Set()
+  const rows = []
+  for (const { mediaId, caption } of items) {
+    const media = db.media.find((item) => item.id === mediaId)
+    if (!media) invalid('gallery', 'One of the gallery files no longer exists.')
+    if (media.kind === 'model') invalid('gallery', 'The gallery takes images and videos. A 3D model goes in the model field.')
+    const text = String(caption ?? '').trim()
+    if (text.length > 200) invalid('gallery', 'Keep each caption under 200 characters.')
+    if (!seen.has(mediaId)) rows.push({ workId, mediaId, caption: text, sortOrder: rows.length })
+    seen.add(mediaId)
   }
-  db.workMedia = db.workMedia.filter((link) => link.workId !== workId)
-  ;[...new Set(mediaIds)].forEach((mediaId, sortOrder) => db.workMedia.push({ workId, mediaId, sortOrder }))
+  db.workMedia = db.workMedia.filter((link) => link.workId !== workId).concat(rows)
 }
 
 function activityAction(before, after) {

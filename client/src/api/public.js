@@ -45,7 +45,10 @@ function publicWork(db, work) {
     gallery: db.workMedia
       .filter((link) => link.workId === work.id)
       .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((link) => media(link.mediaId))
+      .map((link) => {
+        const item = media(link.mediaId)
+        return item && { ...item, caption: link.caption ?? '' }
+      })
       .filter(Boolean),
     model: model
       ? {
