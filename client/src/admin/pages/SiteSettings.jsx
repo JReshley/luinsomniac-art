@@ -1,18 +1,24 @@
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import {
+  createExperience,
   createSocialLink,
+  deleteExperience,
   deleteSocialLink,
   getSettings,
+  listExperience,
   listMedia,
   listSiteText,
   listSocialLinks,
+  reorderExperience,
   reorderSocialLinks,
+  updateExperience,
   updateSettings,
   updateSiteText,
   updateSocialLink,
   useApi,
 } from '../../api/index.js'
+import { DEFAULT_TEXT } from '../../data/siteText.js'
 import AdminPageHeader from '../AdminPageHeader.jsx'
 import { MediaField } from '../MediaPicker.jsx'
 import {
@@ -96,14 +102,17 @@ export default function SiteSettings() {
             <Loaded api={settingsApi} what="brand settings">{(settings) => <BrandForm settings={settings} library={library} />}</Loaded>
           </Section>
 
-          <Section id="home-page" title="Home page" description="Leave a text field empty to use the text that comes with the site.">
+          <Section id="home-page" title="Home page" description="In the order they appear on the page. Clear a text field to go back to the site’s original text.">
             <Loaded api={settingsApi} also={textApi} what="home page settings">
               {(settings, entries) => <HomePageForm settings={settings} entries={entries} library={library} />}
             </Loaded>
           </Section>
 
-          <Section id="about-page" title="About page">
-            <Loaded api={settingsApi} what="About page settings">{(settings) => <AboutPageForm settings={settings} library={library} />}</Loaded>
+          <Section id="about-page" title="About page" description="Clear a text field to go back to the site’s original text.">
+            <Loaded api={settingsApi} also={textApi} what="About page settings">
+              {(settings, entries) => <AboutPageForm settings={settings} entries={entries} library={library} />}
+            </Loaded>
+            <ExperienceList />
           </Section>
 
           <Contact settings={settingsApi.data} />
@@ -151,6 +160,30 @@ function SaveRow({ busy, label, state, dirty }) {
 function useInitial(key, saved) {
   const [draft] = useState(() => readDraft(key))
   return { initial: draft?.value ?? saved, draftAt: draft?.at ?? null }
+}
+
+// A piece of site text as the site shows it: the admin's if set, else the
+// site's own (data/siteText.js). Forms start from this, so a field is never
+// blank while the page shows words.
+const textOf = (entries, key) => {
+  const saved = entries.find((entry) => entry.key === key)?.value
+  return saved?.trim() ? saved : DEFAULT_TEXT[key] ?? ''
+}
+
+// Saves the site-text fields that changed. A field saved as the site's own
+// words, or cleared, is stored empty, so the site keeps following its default.
+async function saveTexts(keys, form, saved) {
+  for (const key of keys) {
+    if (form[key] === saved[key]) continue
+    const value = form[key].trim() === (DEFAULT_TEXT[key] ?? '').trim() ? '' : form[key]
+    await updateSiteText(key, value)
+  }
+}
+
+// One site-text field: a single line, or a box of `rows` lines.
+function TextSetting({ f, name, label, hint, rows = 1 }) {
+  const props = { label, hint, name, value: f.form[name], onChange: (event) => f.update(name, event.target.value) }
+  return rows === 1 ? <TextField {...props} /> : <TextArea rows={rows} {...props} />
 }
 
 // The file a setting points at, or null. A setting added after this data was
@@ -266,16 +299,11 @@ function BrandForm({ settings, library }) {
 
 // --- Home page --------------------------------------------------------------
 
-// The pieces of text the home page reads, by the key it reads them under. Only
-// these do anything, so they're the only ones offered.
-const HOME_TEXT = [
-  ['home.hero.status', 'Availability', 'The short line at the top of the home page, like “Open for commissions”.', 1],
-  ['home.hero.intro', 'Introduction', 'The paragraph under the name on the home page.', 4],
-]
+const HOME_TEXT_KEYS = ['home.hero.status', 'home.hero.intro', 'home.about']
 
 function HomePageForm({ settings, entries, library }) {
   const fromServer = {
-    ...Object.fromEntries(HOME_TEXT.map(([key]) => [key, entries.find((entry) => entry.key === key)?.value ?? ''])),
+    ...Object.fromEntries(HOME_TEXT_KEYS.map((key) => [key, textOf(entries, key)])),
     home_reel: fileOf(settings, 'home_reel'),
   }
   const f = useSettingsForm('home-page', fromServer)
@@ -285,7 +313,7 @@ function HomePageForm({ settings, entries, library }) {
     event.preventDefault()
     f.save(
       async (form, saved) => {
-        for (const [key] of HOME_TEXT) if (form[key] !== saved[key]) await updateSiteText(key, form[key])
+        await saveTexts(HOME_TEXT_KEYS, form, saved)
         if (form.home_reel !== saved.home_reel) await updateSettings({ home_reel: { mediaId: form.home_reel } })
       },
       (err) => {
@@ -299,10 +327,8 @@ function HomePageForm({ settings, entries, library }) {
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-2 rounded-lg border border-ink/10 bg-surface p-2">
       {f.draftNotice}
-      {HOME_TEXT.map(([key, label, hint, rows]) => {
-        const props = { label, hint, optional: true, value: f.form[key], onChange: (event) => f.update(key, event.target.value) }
-        return rows === 1 ? <TextField key={key} {...props} /> : <TextArea key={key} rows={rows} {...props} />
-      })}
+      <TextSetting f={f} name="home.hero.status" label="Availability" hint="The short line at the very top, like “Open for commissions”." />
+      <TextSetting f={f} name="home.hero.intro" label="Introduction" hint="The paragraph under the headline." rows={3} />
       <MediaField
         label="Prop samples video"
         kind="video"
@@ -312,6 +338,7 @@ function HomePageForm({ settings, entries, library }) {
         error={reelError}
         onChange={(media) => { f.update('home_reel', media?.id ?? null); setReelError('') }}
       />
+      <TextSetting f={f} name="home.about" label="About Lui summary" hint="The paragraph in the About Lui section near the end. The software list there comes from the About page." rows={3} />
       {f.errorNotice}
       <SaveRow busy={f.busy} label="Save home page" state={f.state} dirty={f.dirty} />
     </form>
@@ -320,14 +347,23 @@ function HomePageForm({ settings, entries, library }) {
 
 // --- About page -------------------------------------------------------------
 
-function AboutPageForm({ settings, library }) {
-  const f = useSettingsForm('about-page', { portrait: fileOf(settings, 'portrait') })
+const ABOUT_TEXT_KEYS = ['about.intro', 'about.body', 'about.software']
+
+function AboutPageForm({ settings, entries, library }) {
+  const fromServer = {
+    portrait: fileOf(settings, 'portrait'),
+    ...Object.fromEntries(ABOUT_TEXT_KEYS.map((key) => [key, textOf(entries, key)])),
+  }
+  const f = useSettingsForm('about-page', fromServer)
   const [portraitError, setPortraitError] = useState('')
 
   function submit(event) {
     event.preventDefault()
     f.save(
-      (form) => updateSettings({ portrait: { mediaId: form.portrait } }),
+      async (form, saved) => {
+        if (form.portrait !== saved.portrait) await updateSettings({ portrait: { mediaId: form.portrait } })
+        await saveTexts(ABOUT_TEXT_KEYS, form, saved)
+      },
       (err) => {
         if (err.field !== 'portrait') return false
         setPortraitError(err.message)
@@ -342,14 +378,218 @@ function AboutPageForm({ settings, library }) {
       <MediaField
         label="Portrait"
         kind="image"
-        hint="The picture of Lui on the About page and in the About section of the home page. Empty shows a placeholder."
+        hint="The picture of Lui here and in the About Lui section of the home page. Empty shows a placeholder."
         mediaId={f.form.portrait}
         library={library}
         error={portraitError}
         onChange={(media) => { f.update('portrait', media?.id ?? null); setPortraitError('') }}
       />
+      <TextSetting f={f} name="about.intro" label="Introduction" hint="The large first paragraph." rows={3} />
+      <TextSetting f={f} name="about.body" label="More about Lui" hint="The smaller paragraph under it." rows={4} />
+      <TextSetting
+        f={f}
+        name="about.software"
+        label="Software"
+        hint="Separate with commas, in the order to show them. Also listed in the home page’s About Lui section."
+      />
       {f.errorNotice}
       <SaveRow busy={f.busy} label="Save About page" state={f.state} dirty={f.dirty} />
+    </form>
+  )
+}
+
+// The "Selected experience" rows, in order: edited, reordered and removed one
+// at a time, like the social links. An empty list hides the section on the site.
+const experienceRules = {
+  years: rules.required('Enter the years, like 2024—2025 or 2025—now.'),
+  role: rules.required('Enter the role or what it was, like Freelance 3D artist.'),
+}
+
+function ExperienceList() {
+  const api = useApi(listExperience, [])
+  const { data: rows, error } = api
+  const [toDelete, setToDelete] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState({ tone: 'info', text: '' })
+
+  async function move(index, by) {
+    const next = [...rows]
+    ;[next[index], next[index + by]] = [next[index + by], next[index]]
+    // Shown in the new order at once; put back if the save fails.
+    api.setData(next)
+    try {
+      await reorderExperience(next.map((row) => row.id))
+      setNotice({ tone: 'info', text: 'Saved the new order.' })
+    } catch (err) {
+      api.reload()
+      setNotice({ tone: 'error', text: err.message })
+    }
+  }
+
+  async function confirmDelete() {
+    setBusy(true)
+    try {
+      await deleteExperience(toDelete.id)
+      api.setData((list) => withoutRow(list, toDelete.id))
+      clearDraft(`experience-${toDelete.id}`)
+      setNotice({ tone: 'info', text: `Removed “${toDelete.role}”.` })
+    } catch (err) {
+      setNotice({ tone: 'error', text: err.message })
+    } finally {
+      setBusy(false)
+      setToDelete(null)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1 rounded-lg border border-ink/10 bg-surface p-2">
+      <div className="flex flex-wrap items-baseline gap-x-2">
+        <h3 className="leading-[1.25] font-bold">Selected experience</h3>
+        <RefreshStatus sources={[api]} />
+      </div>
+      <p className="text-caption text-ink/65">Newest first is usual. Each row saves on its own.</p>
+      <Notice tone={notice.tone}>{notice.text}</Notice>
+      {!rows && (error ? <LoadError what="experience" error={error} /> : <Skeleton rows={2} />)}
+      {rows?.length === 0 && (
+        <EmptyState title="No experience yet.">The section is hidden on the About page until there’s at least one. Add the first below.</EmptyState>
+      )}
+      {rows?.length > 0 && (
+        <ol className="flex flex-col divide-y divide-ink/10 rounded-sm border border-ink/10">
+          {rows.map((row, index) => (
+            <ExperienceRow
+              key={row.id}
+              row={row}
+              isFirst={index === 0}
+              isLast={index === rows.length - 1}
+              onMove={(by) => move(index, by)}
+              onDelete={() => setToDelete(row)}
+              onSaved={(saved) => api.setData((list) => withRow(list, saved))}
+            />
+          ))}
+        </ol>
+      )}
+      {rows && <AddExperience onAdded={(created) => api.setData((list) => withRow(list, created))} />}
+
+      <ConfirmDialog
+        open={Boolean(toDelete)}
+        title={`Remove “${toDelete?.role}”?`}
+        confirmLabel={`Remove “${toDelete?.role}”`}
+        busy={busy}
+        onCancel={() => setToDelete(null)}
+        onConfirm={confirmDelete}
+      >
+        <p>It comes off the About page and is deleted for good.</p>
+      </ConfirmDialog>
+    </div>
+  )
+}
+
+// The three fields of an experience row, shared by editing and adding.
+function ExperienceFields({ prefix, form, update, validation }) {
+  const field = (name) => ({
+    name: `${prefix}-${name}`,
+    value: form[name],
+    onChange: (event) => update(name, event.target.value),
+    onBlur: experienceRules[name] ? validation.blur(name, form[name]) : undefined,
+    error: validation.errors[name],
+  })
+  return (
+    <>
+      <div className="grid gap-2 md:grid-cols-[10rem_1fr]">
+        <TextField label="Years" required placeholder="2024—2025" {...field('years')} />
+        <TextField label="Role" required placeholder="Freelance 3D artist" {...field('role')} />
+      </div>
+      <TextField label="Detail" optional hint="One short line under the role." {...field('detail')} />
+    </>
+  )
+}
+
+function ExperienceRow({ row, isFirst, isLast, onMove, onDelete, onSaved }) {
+  const key = `experience-${row.id}`
+  const fromServer = { years: row.years, role: row.role, detail: row.detail }
+  const { initial } = useInitial(key, fromServer)
+  const [form, setForm] = useState(initial)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState('')
+  const validation = useValidation(experienceRules)
+  const dirty = Object.keys(form).some((name) => form[name] !== row[name])
+  useDraft(key, form, dirty)
+
+  const update = (name, value) => {
+    setForm((prev) => ({ ...prev, [name]: value }))
+    validation.clear(name)
+    setSaved(false)
+    setError('')
+  }
+
+  async function save(event) {
+    event.preventDefault()
+    const first = validation.checkAll(form)
+    if (first) return focusField(`${row.id}-${first}`)
+    try {
+      onSaved(await updateExperience(row.id, form))
+      setSaved(true)
+    } catch (err) {
+      if (err.field) validation.set(err.field, err.message)
+      else setError(err.message)
+    }
+  }
+
+  return (
+    <li>
+      <form onSubmit={save} noValidate className="flex flex-col gap-1 p-2">
+        <ExperienceFields prefix={row.id} form={form} update={update} validation={validation} />
+        {error && <Notice tone="error">{error}</Notice>}
+        <div className="flex flex-wrap items-center gap-x-2">
+          <Button type="submit" variant="outline">Save experience</Button>
+          <span className="flex gap-1">
+            <LinkButton disabled={isFirst} onClick={() => onMove(-1)} aria-label={`Move ${row.role} up`}>Move up</LinkButton>
+            <LinkButton disabled={isLast} onClick={() => onMove(1)} aria-label={`Move ${row.role} down`}>Move down</LinkButton>
+            <LinkButton onClick={onDelete} aria-label={`Remove ${row.role}`}>Remove</LinkButton>
+          </span>
+          <span role="status" className="text-caption text-ink/65">{saved ? 'Saved.' : dirty ? 'Unsaved changes.' : ''}</span>
+        </div>
+      </form>
+    </li>
+  )
+}
+
+function AddExperience({ onAdded }) {
+  const blank = { years: '', role: '', detail: '' }
+  const { initial } = useInitial('new-experience', blank)
+  const [form, setForm] = useState(initial)
+  const [error, setError] = useState('')
+  const validation = useValidation(experienceRules)
+  useDraft('new-experience', form, Boolean(form.years.trim() || form.role.trim() || form.detail.trim()))
+
+  const update = (name, value) => {
+    setForm((prev) => ({ ...prev, [name]: value }))
+    validation.clear(name)
+    setError('')
+  }
+
+  async function add(event) {
+    event.preventDefault()
+    const first = validation.checkAll(form)
+    if (first) return focusField(`new-${first}`)
+    try {
+      onAdded(await createExperience(form))
+      setForm(blank)
+    } catch (err) {
+      if (err.field) validation.set(err.field, err.message)
+      else setError(err.message)
+    }
+  }
+
+  return (
+    <form onSubmit={add} noValidate className="flex flex-col gap-2 rounded-sm border border-dashed border-ink/25 bg-bg p-2">
+      <h4 className="leading-[1.25] font-bold">Add experience</h4>
+      <ExperienceFields prefix="new" form={form} update={update} validation={validation} />
+      {error && <Notice tone="error">{error}</Notice>}
+      <div>
+        <Button type="submit">Add experience</Button>
+      </div>
+      <p className="text-caption text-ink/65">New rows go at the end; move them up if they’re newer.</p>
     </form>
   )
 }

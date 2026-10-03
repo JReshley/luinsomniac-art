@@ -121,6 +121,7 @@ export async function getSiteContent() {
       icon: image('icon'),
       portrait: image('portrait'),
       homeReel: image('home_reel'),
+      experience: [...db.experience].sort((a, b) => a.sortOrder - b.sortOrder).map(({ id, years, role, detail }) => ({ id, years, role, detail })),
     }
   })
   return resolveMediaUrls(content)

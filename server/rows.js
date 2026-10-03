@@ -26,6 +26,7 @@ const TABLES = {
   workMedia: 'work_media',
   siteText: 'site_text',
   socialLinks: 'social_links',
+  experience: 'experience',
   settings: 'settings',
   activityLog: 'activity_log',
 }

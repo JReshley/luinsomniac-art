@@ -12,6 +12,19 @@ import { loadDb } from '../rows.js'
 
 const TABLES = ['works', 'media', 'categories', 'modelDetails', 'videoDetails', 'workMedia', 'siteText', 'socialLinks', 'settings']
 
+// The About page's experience rows, in order. Read on their own, and a
+// database that doesn't have the table yet (schema.sql not run since it was
+// added) answers null, so the site keeps its own copy instead of failing.
+async function publicExperience() {
+  try {
+    const { rows } = await pool.query('SELECT id, years, role, detail FROM experience ORDER BY sort_order')
+    return rows
+  } catch (error) {
+    if (error.code === '42P01') return null // undefined_table
+    throw error
+  }
+}
+
 const publicMedia = (media) =>
   media
     ? {
@@ -128,6 +141,7 @@ export function publicRoutes({ storage }) {
         icon: image('icon'),
         portrait: image('portrait'),
         homeReel: image('home_reel'),
+        experience: await publicExperience(),
       })
     )
   }))

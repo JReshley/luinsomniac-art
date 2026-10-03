@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo } from 'react'
 import { getSiteContent, useApi } from '../api/index.js'
 import { EMAIL, SOCIALS } from '../data/contact.js'
+import { DEFAULT_EXPERIENCE, DEFAULT_TEXT, softwareList } from '../data/siteText.js'
 
 // The site-wide content the admin edits (Site text, Links, Brand), loaded once
 // for the whole public site and read with useSite().
@@ -31,8 +32,13 @@ function build(data) {
     portrait: data?.portrait ?? null,
     // The Prop Samples video on the home page (YouTube), or null for the placeholder.
     homeReel: data?.homeReel ?? null,
-    // A piece of site text, or `fallback` when the admin hasn't set one.
-    text: (key, fallback) => text[key] ?? fallback,
+    // A piece of site text: the admin's, else the site's own (data/siteText.js).
+    // A field cleared in the admin goes back to the site's own too.
+    text: (key, fallback = DEFAULT_TEXT[key]) => (text[key]?.trim() ? text[key] : fallback),
+    // The tools listed on the About page and the home page's About section.
+    software: softwareList(text['about.software']?.trim() ? text['about.software'] : DEFAULT_TEXT['about.software']),
+    // The About page's experience rows, in order. An empty list hides the section.
+    experience: data?.experience ?? DEFAULT_EXPERIENCE,
     // Email first, then the profiles. Only the profiles open in a new tab.
     contacts: [
       { id: 'email', label: email, href: `mailto:${email}` },

@@ -10,6 +10,7 @@ export { listCategories, createCategory, updateCategory, reorderCategories, dele
 export {
   listSiteText, updateSiteText,
   listSocialLinks, createSocialLink, updateSocialLink, reorderSocialLinks, deleteSocialLink,
+  listExperience, createExperience, updateExperience, reorderExperience, deleteExperience,
   getSettings, updateSettings,
 } from './content.js'
 export { getDashboard, listActivity } from './dashboard.js'

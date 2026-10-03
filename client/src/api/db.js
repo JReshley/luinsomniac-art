@@ -41,7 +41,13 @@ let db = load()
 function load() {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY))
-    if (saved?.version === VERSION) return saved
+    if (saved?.version === VERSION) {
+      // A table added since this browser's data was made starts from the seed,
+      // and everything already saved is kept.
+      const fresh = buildSeed(VERSION)
+      for (const table of Object.keys(fresh)) saved[table] ??= fresh[table]
+      return saved
+    }
   } catch {
     // Unreadable or blocked storage: start from the seed.
   }

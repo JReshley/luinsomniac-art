@@ -13,7 +13,7 @@
 -- can sign in, and are added by hand.
 
 TRUNCATE TABLE activity_log, work_media, model_details, video_details, works, categories,
-  site_text, social_links, settings, media CASCADE;
+  site_text, social_links, experience, settings, media CASCADE;
 
 INSERT INTO categories (name, slug, sort_order) VALUES
   ('3D', '3d', 0),
@@ -95,6 +95,11 @@ INSERT INTO social_links (platform, handle, url, visible, sort_order) VALUES
   ('instagram', 'luinsomniac_art', 'https://www.instagram.com/luinsomniac_art', true, 0),
   ('tiktok', '@luinsomniac_art', 'https://www.tiktok.com/@luinsomniac_art', true, 1),
   ('vgen', 'Luinsomniac_Art', 'https://vgen.co/Luinsomniac_Art', true, 2);
+
+INSERT INTO experience (years, role, detail, sort_order) VALUES
+  ('2025—now', 'Freelance 3D & 2D artist', 'Props, backgrounds, commissioned animation', 0),
+  ('2024—2025', 'President, multimedia arts org', 'Ran events, branding and student productions', 1),
+  ('2022—2026', 'BS Entertainment & Multimedia Computing', 'Specialization in animation', 2);
 
 INSERT INTO settings (key, value, media_id) VALUES
   ('contact_email', 'luinsomniac@gmail.com', NULL),

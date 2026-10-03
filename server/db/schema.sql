@@ -278,6 +278,26 @@ CREATE TABLE IF NOT EXISTS social_links (
   sort_order INTEGER NOT NULL DEFAULT 0
 );
 
+-- The About page's "Selected experience" rows, in sort_order. When the table
+-- is first made it starts with the rows the site had hard-coded, so the page
+-- looks the same; after that it's the admin's (running this file again never
+-- puts deleted rows back).
+DO $$ BEGIN
+  IF to_regclass('experience') IS NULL THEN
+    CREATE TABLE experience (
+      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      years      TEXT    NOT NULL CHECK (length(btrim(years)) BETWEEN 1 AND 40),
+      role       TEXT    NOT NULL CHECK (length(btrim(role)) BETWEEN 1 AND 120),
+      detail     TEXT    NOT NULL DEFAULT '' CHECK (length(detail) <= 200),
+      sort_order INTEGER NOT NULL DEFAULT 0
+    );
+    INSERT INTO experience (years, role, detail, sort_order) VALUES
+      ('2025—now', 'Freelance 3D & 2D artist', 'Props, backgrounds, commissioned animation', 0),
+      ('2024—2025', 'President, multimedia arts org', 'Ran events, branding and student productions', 1),
+      ('2022—2026', 'BS Entertainment & Multimedia Computing', 'Specialization in animation', 2);
+  END IF;
+END $$;
+
 -- The contact email, display name, the logo, icon and portrait, and the home
 -- page's Prop Samples video. A null value or media_id means the site uses the
 -- copy bundled in the repo, or a placeholder where nothing is bundled.
@@ -356,5 +376,6 @@ ALTER TABLE video_details ENABLE ROW LEVEL SECURITY;
 ALTER TABLE work_media    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE site_text     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE social_links  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE experience    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE settings      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_log  ENABLE ROW LEVEL SECURITY;

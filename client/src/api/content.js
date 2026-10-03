@@ -12,7 +12,7 @@
 
 import { ApiError, findRow, logActivity, mutate, newId, query } from './db.js'
 import { resolveMediaUrls } from './media.js'
-import { FILE_SETTINGS, SETTING_KEYS } from './shared.js'
+import { EXPERIENCE_FIELDS, experienceProblem, FILE_SETTINGS, SETTING_KEYS } from './shared.js'
 
 // --- Site text ------------------------------------------------------------
 
@@ -93,6 +93,55 @@ function validateLink(link) {
   link.visible = Boolean(link.visible)
   if (!link.platform) throw new ApiError('invalid', 'Say which site the link is for, like “instagram”.', { field: 'platform' })
   if (!/^https:\/\/\S+$/.test(link.url)) throw new ApiError('invalid', 'Links need to start with https://', { field: 'url' })
+}
+
+// --- Experience -----------------------------------------------------------
+// The About page's "Selected experience" rows, in order.
+
+export function listExperience() {
+  return query((db) => [...db.experience].sort((a, b) => a.sortOrder - b.sortOrder))
+}
+
+export function createExperience(fields) {
+  return mutate((db, ctx) => {
+    const row = { id: newId(), years: '', role: '', detail: '', sortOrder: Math.max(-1, ...db.experience.map((e) => e.sortOrder)) + 1 }
+    validateExperience(Object.assign(row, pick(fields, EXPERIENCE_FIELDS)))
+    db.experience.push(row)
+    logActivity(db, ctx, 'create', 'experience', row.id, `Added the experience “${row.role}”`)
+    return row
+  })
+}
+
+export function updateExperience(id, changes) {
+  return mutate((db, ctx) => {
+    const row = findRow(db.experience, id, 'experience')
+    validateExperience(Object.assign(row, pick(changes, EXPERIENCE_FIELDS)))
+    logActivity(db, ctx, 'update', 'experience', id, `Edited the experience “${row.role}”`)
+    return row
+  })
+}
+
+export function reorderExperience(ids) {
+  return mutate((db, ctx) => {
+    if (ids.length !== db.experience.length || !db.experience.every((row) => ids.includes(row.id))) {
+      throw new ApiError('invalid', 'The experience changed while you were sorting it. Reload and try again.')
+    }
+    ids.forEach((id, i) => (findRow(db.experience, id, 'experience').sortOrder = i))
+    logActivity(db, ctx, 'reorder', 'experience', null, 'Reordered the experience')
+  })
+}
+
+export function deleteExperience(id) {
+  return mutate((db, ctx) => {
+    const row = findRow(db.experience, id, 'experience')
+    db.experience = db.experience.filter((item) => item.id !== id)
+    logActivity(db, ctx, 'delete', 'experience', id, `Removed the experience “${row.role}”`)
+  })
+}
+
+function validateExperience(row) {
+  const problem = experienceProblem(row)
+  if (problem) throw new ApiError('invalid', problem.message, { field: problem.field })
 }
 
 // --- Settings -------------------------------------------------------------

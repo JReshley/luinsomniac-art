@@ -6,12 +6,13 @@ import { ApiError, route } from '../errors.js'
 import { resolveMediaUrls } from '../mediaFiles.js'
 import { loadDb, pick } from '../rows.js'
 
-// Site text, social links and site settings: the Site text, Links and Brand
-// screens.
+// Site text, social links, the About page's experience and the site settings:
+// everything on the admin's Site settings page.
 
 // Keys name where the text appears, page first: "home.hero.intro".
 const KEY_PATTERN = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/
 const LINK_FIELDS = ['platform', 'handle', 'url', 'visible']
+const EXPERIENCE_FIELDS = ['years', 'role', 'detail']
 
 // The keys the Brand and Links screens edit. A null value or media means the
 // site uses the copy bundled in the repo (the logo in src/assets, and so on).
@@ -120,6 +121,66 @@ export function contentRoutes({ storage }) {
     response.status(204).end()
   }))
 
+  // --- Experience ---------------------------------------------------------
+  // The About page's "Selected experience" rows, in order.
+
+  const experienceNotFound = () => new ApiError('not_found', 'That experience doesn’t exist. It may have been removed in another tab.')
+
+  router.get('/experience', route(async (request, response) => {
+    const { experience } = await loadDb(pool, ['experience'])
+    response.json(experience.sort((a, b) => a.sortOrder - b.sortOrder))
+  }))
+
+  router.post('/experience', route(async (request, response) => {
+    const created = await transaction(async (client) => {
+      const { experience } = await loadDb(client, ['experience'])
+      const row = { id: randomUUID(), years: '', role: '', detail: '', sortOrder: Math.max(-1, ...experience.map((e) => e.sortOrder)) + 1 }
+      validateExperience(Object.assign(row, pick(request.body, EXPERIENCE_FIELDS)))
+      await client.query('INSERT INTO experience (id, years, role, detail, sort_order) VALUES ($1, $2, $3, $4, $5)', [row.id, row.years, row.role, row.detail, row.sortOrder])
+      await logActivity(client, request.admin.id, 'create', 'experience', row.id, `Added the experience “${row.role}”`)
+      return row
+    })
+    response.status(201).json(created)
+  }))
+
+  // Registered before /experience/:id so "order" isn't read as an id.
+  router.put('/experience/order', route(async (request, response) => {
+    const ids = request.body?.ids
+    await transaction(async (client) => {
+      const { experience } = await loadDb(client, ['experience'])
+      if (!Array.isArray(ids) || ids.length !== experience.length || !experience.every((row) => ids.includes(row.id))) {
+        throw new ApiError('invalid', 'The experience changed while you were sorting it. Reload and try again.')
+      }
+      for (const [i, id] of ids.entries()) await client.query('UPDATE experience SET sort_order = $1 WHERE id = $2', [i, id])
+      await logActivity(client, request.admin.id, 'reorder', 'experience', null, 'Reordered the experience')
+    })
+    response.status(204).end()
+  }))
+
+  router.patch('/experience/:id', route(async (request, response) => {
+    const updated = await transaction(async (client) => {
+      const { experience } = await loadDb(client, ['experience'])
+      const row = experience.find((item) => item.id === request.params.id)
+      if (!row) throw experienceNotFound()
+      validateExperience(Object.assign(row, pick(request.body, EXPERIENCE_FIELDS)))
+      await client.query('UPDATE experience SET years = $1, role = $2, detail = $3 WHERE id = $4', [row.years, row.role, row.detail, row.id])
+      await logActivity(client, request.admin.id, 'update', 'experience', row.id, `Edited the experience “${row.role}”`)
+      return row
+    })
+    response.json(updated)
+  }))
+
+  router.delete('/experience/:id', route(async (request, response) => {
+    await transaction(async (client) => {
+      const { experience } = await loadDb(client, ['experience'])
+      const row = experience.find((item) => item.id === request.params.id)
+      if (!row) throw experienceNotFound()
+      await client.query('DELETE FROM experience WHERE id = $1', [row.id])
+      await logActivity(client, request.admin.id, 'delete', 'experience', row.id, `Removed the experience “${row.role}”`)
+    })
+    response.status(204).end()
+  }))
+
   // --- Settings -----------------------------------------------------------
 
   // { contact_email: { value, mediaId, media }, ... }
@@ -170,6 +231,22 @@ export function contentRoutes({ storage }) {
 }
 
 const linkNotFound = () => new ApiError('not_found', 'That link doesn’t exist. It may have been removed in another tab.')
+
+// Tidies an experience row in place; the same rules as the mock
+// (client/src/api/shared.js) and the table's CHECKs.
+function validateExperience(row) {
+  row.years = String(row.years ?? '').trim()
+  row.role = String(row.role ?? '').trim()
+  row.detail = String(row.detail ?? '').trim()
+  const invalid = (field, message) => {
+    throw new ApiError('invalid', message, { field })
+  }
+  if (!row.years) invalid('years', 'Enter the years, like 2024—2025 or 2025—now.')
+  if (row.years.length > 40) invalid('years', 'Keep the years under 40 characters.')
+  if (!row.role) invalid('role', 'Enter the role or what it was, like Freelance 3D artist.')
+  if (row.role.length > 120) invalid('role', 'Keep the role under 120 characters.')
+  if (row.detail.length > 200) invalid('detail', 'Keep the detail under 200 characters.')
+}
 
 function validateLink(link) {
   link.platform = String(link.platform).trim().toLowerCase()

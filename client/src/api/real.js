@@ -81,6 +81,12 @@ export const updateSocialLink = (id, changes) => request('PATCH', `/api/admin/li
 export const reorderSocialLinks = (ids) => request('PUT', '/api/admin/links/order', { body: { ids } })
 export const deleteSocialLink = (id) => request('DELETE', `/api/admin/links/${enc(id)}`)
 
+export const listExperience = () => request('GET', '/api/admin/experience')
+export const createExperience = (fields) => request('POST', '/api/admin/experience', { body: fields })
+export const updateExperience = (id, changes) => request('PATCH', `/api/admin/experience/${enc(id)}`, { body: changes })
+export const reorderExperience = (ids) => request('PUT', '/api/admin/experience/order', { body: { ids } })
+export const deleteExperience = (id) => request('DELETE', `/api/admin/experience/${enc(id)}`)
+
 export const getSettings = () => request('GET', '/api/admin/settings')
 export const updateSettings = (changes) => request('PATCH', '/api/admin/settings', { body: changes })
 

@@ -15,6 +15,7 @@
 import { WORKS } from '../data/works.js'
 import { MODELS } from '../data/models.js'
 import { EMAIL, SOCIALS } from '../data/contact.js'
+import { DEFAULT_EXPERIENCE } from '../data/siteText.js'
 
 // The Museum's filter order (pages/Museum.jsx).
 const CATEGORIES = ['3D', 'Props', 'Background', 'Character', '2D art', 'Animation']
@@ -127,6 +128,7 @@ export function buildSeed(version) {
         updatedBy: null,
       },
     ],
+    experience: DEFAULT_EXPERIENCE.map(({ years, role, detail }, i) => ({ id: id(), years, role, detail, sortOrder: i })),
     socialLinks: SOCIALS.map((social, i) => ({
       id: id(),
       platform: social.id,

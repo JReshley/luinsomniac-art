@@ -11,6 +11,22 @@ export const SETTING_KEYS = ['contact_email', 'display_name', 'logo', 'icon', 'p
 // Settings that point at a file, and the kind of file each takes.
 export const FILE_SETTINGS = { logo: 'image', icon: 'image', portrait: 'image', home_reel: 'video' }
 
+// One row of the About page's "Selected experience", tidied in place. Throws
+// the first problem as { field, message }; the mock and the server both use it
+// (the server has its own copy in server/routes/content.js).
+export const EXPERIENCE_FIELDS = ['years', 'role', 'detail']
+export function experienceProblem(row) {
+  row.years = String(row.years ?? '').trim()
+  row.role = String(row.role ?? '').trim()
+  row.detail = String(row.detail ?? '').trim()
+  if (!row.years) return { field: 'years', message: 'Enter the years, like 2024—2025 or 2025—now.' }
+  if (row.years.length > 40) return { field: 'years', message: 'Keep the years under 40 characters.' }
+  if (!row.role) return { field: 'role', message: 'Enter the role or what it was, like Freelance 3D artist.' }
+  if (row.role.length > 120) return { field: 'role', message: 'Keep the role under 120 characters.' }
+  if (row.detail.length > 200) return { field: 'detail', message: 'Keep the detail under 200 characters.' }
+  return null
+}
+
 // Supabase's free plan includes 1 GB of file storage.
 export const STORAGE_LIMIT_BYTES = 1024 ** 3
 

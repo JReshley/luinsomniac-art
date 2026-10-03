@@ -21,14 +21,9 @@ function replay(event) {
   }
 }
 
-// Used until the admin's own text arrives, and when it's never been set.
-const STATUS = 'Open for commissions'
-const INTRO =
-  'Multimedia artist working across prop modeling, background design, character creation and story-driven animation — from first thumbnail to final render.'
-
 export default function Hero() {
   const site = useSite()
-  const status = site.text('home.hero.status', STATUS)
+  const status = site.text('home.hero.status')
 
   return (
     <section className="mx-auto grid max-w-page items-end gap-3 px-2 pt-3 pb-6 md:gap-5 md:py-6 md:grid-cols-[1.35fr_0.65fr] md:px-3 lg:px-5 lg:py-8">
@@ -74,7 +69,7 @@ export default function Hero() {
         </h1>
 
         <p className="rise max-w-[36rem] text-ink/65" style={{ '--i': 8 }}>
-          {site.text('home.hero.intro', INTRO)}
+          {site.text('home.hero.intro')}
         </p>
 
         <div className="rise flex w-full flex-col gap-1.5 pt-1.5 md:w-auto md:flex-row" style={{ '--i': 9 }}>
