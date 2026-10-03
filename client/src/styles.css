@@ -11,6 +11,8 @@
   --color-bg: #f7f6f3;
   --color-surface: #ffffff;
   --color-ink: #0b1533;
+  /* Only for actions that delete or take something away (admin confirmations). */
+  --color-danger: #b3261e;
 
   /* Fonts */
   --font-*: initial;
@@ -305,4 +307,12 @@
 @keyframes page-wipe {
   from { clip-path: polygon(0 0, 0 0, -20% 100%, 0 100%); }
   to { clip-path: polygon(0 0, 120% 0, 100% 100%, 0 100%); }
+}
+
+/* The admin's slide-over panel coming in from the right edge (ui.jsx, Dialog
+   with `side`). Only applied under prefers-reduced-motion: no-preference. */
+@keyframes slide-in {
+  from {
+    translate: 100% 0;
+  }
 }

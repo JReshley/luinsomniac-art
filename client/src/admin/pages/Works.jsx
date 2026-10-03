@@ -1,20 +1,34 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import Button from '../../components/Button.jsx'
-import { archiveWork, listCategories, listWorks, setWorkStatus, STATUSES, useApi } from '../../api/index.js'
+import { archiveWork, listCategories, listWorks, setWorkStatus, useApi } from '../../api/index.js'
 import AdminPageHeader from '../AdminPageHeader.jsx'
 import { MediaThumb } from '../MediaPicker.jsx'
-import { ConfirmDialog, KIND_LABELS, LinkButton, Notice, SelectField, StatusBadge, TextField } from '../ui.jsx'
+import {
+  Button,
+  ConfirmDialog,
+  EmptyState,
+  KIND_LABELS,
+  LinkButton,
+  ListToolbar,
+  LoadError,
+  Notice,
+  PAGE_SIZE,
+  Pager,
+  SelectField,
+  shownStatus,
+  Skeleton,
+  StatusBadge,
+} from '../ui.jsx'
 
-// All works in one list. The tabs and the status filter live in the address
+// All works in one list (page pattern: List). Search, one Filters panel and
+// a sort sit above it; filters and sort live in the address
 // (?kind=model&status=draft), so a dashboard link, a bookmark and the back
 // button all land on the same view.
 
-const TABS = [
-  { label: 'All', kind: null },
-  { label: 'Artworks', kind: 'artwork' },
-  { label: '3D models', kind: 'model' },
-  { label: 'Videos', kind: 'video' },
+const SORTS = [
+  ['edited', 'Last edited', (a, b) => b.updatedAt.localeCompare(a.updatedAt)],
+  ['title', 'Title, A to Z', (a, b) => a.title.localeCompare(b.title)],
+  ['year', 'Year, newest first', (a, b) => (b.year ?? 0) - (a.year ?? 0)],
 ]
 
 export default function Works() {
@@ -23,26 +37,37 @@ export default function Works() {
   const status = params.get('status') || undefined
   const categoryId = params.get('category') || undefined
   const attention = params.get('attention') === '1'
+  const sort = params.get('sort') || 'edited'
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
   const [toArchive, setToArchive] = useState(null)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState({ tone: 'info', text: '' })
 
-  const { data: works, error } = useApi(() => listWorks({ kind, status, categoryId, attention, search }), [kind, status, categoryId, attention, search])
+  // Drafts include the old 'ready' status, so they're picked out here rather
+  // than by the API's exact match.
+  const { data: found, error } = useApi(
+    () => listWorks({ kind, status: status === 'draft' ? undefined : status, categoryId, attention, search }),
+    [kind, status, categoryId, attention, search]
+  )
   const { data: categories } = useApi(listCategories, [])
 
-  function setFilter(name, value) {
+  const compare = (SORTS.find(([value]) => value === sort) ?? SORTS[0])[2]
+  const works = found && (status === 'draft' ? found.filter((work) => shownStatus(work.status) === 'draft') : found).slice().sort(compare)
+  const shown = works?.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  function setParam(name, value) {
     const next = new URLSearchParams(params)
     if (value) next.set(name, value)
     else next.delete(name)
     setParams(next, { replace: true })
+    setPage(1)
   }
 
-  const tabHref = (tabKind) => {
-    const next = new URLSearchParams(params)
-    if (tabKind) next.set('kind', tabKind)
-    else next.delete('kind')
-    return `?${next}`
+  function clearFilters() {
+    setSearch('')
+    setParams(sort === 'edited' ? {} : { sort }, { replace: true })
+    setPage(1)
   }
 
   async function run(job, success) {
@@ -59,131 +84,96 @@ export default function Works() {
     }
   }
 
-  const filtered = Boolean(status || categoryId || attention || search.trim())
+  const filters = [
+    { name: 'kind', label: 'Type', options: Object.entries(KIND_LABELS) },
+    { name: 'status', label: 'Status', options: [['draft', 'Draft'], ['published', 'Published'], ['archived', 'Archived']] },
+    { name: 'category', label: 'Category', options: (categories ?? []).map((category) => [category.id, category.name]) },
+    { name: 'attention', label: 'Only to-dos', checkbox: true },
+  ]
+  const filtered = Boolean(kind || status || categoryId || attention || search.trim())
 
   return (
     <>
-      <AdminPageHeader
-        title="Works"
-        actions={
-          <>
-            <Button href="/admin/works/new?kind=artwork" viewTransition={false}>New artwork</Button>
-            <Button href="/admin/works/new?kind=model" variant="outline" viewTransition={false}>New 3D model</Button>
-            <Button href="/admin/works/new?kind=video" variant="outline" viewTransition={false}>New video</Button>
-          </>
-        }
-      >
-        Every artwork, 3D model and video on the site.
+      <AdminPageHeader title="Works" actions={<Button href={`/admin/works/new${kind ? `?kind=${kind}` : ''}`}>Add work</Button>}>
+        Every artwork, 3D model and video. Open one to edit it.
       </AdminPageHeader>
 
-      <nav aria-label="Kind of work" className="mb-2 flex flex-wrap gap-1">
-        {TABS.map((tab) => {
-          const current = (tab.kind ?? undefined) === kind
-          return (
-            <Link
-              key={tab.label}
-              to={tabHref(tab.kind)}
-              replace
-              aria-current={current ? 'page' : undefined}
-              className={`rounded-full border px-1.5 py-0.5 text-caption font-medium no-underline ${
-                current ? 'border-primary bg-primary text-surface' : 'border-ink/25 text-ink hover:bg-ink/5'
-              }`}
-            >
-              {tab.label}
-            </Link>
-          )
-        })}
-      </nav>
-
-      <div className="mb-2 grid gap-1.5 md:grid-cols-[2fr_1fr_1fr_auto] md:items-end">
-        <TextField label="Search" type="search" value={search} onChange={(event) => setSearch(event.target.value)} hint="Title, slug or tag" />
-        <SelectField label="Status" value={status ?? ''} onChange={(event) => setFilter('status', event.target.value)}>
-          <option value="">Not archived</option>
-          {STATUSES.map((item) => (
-            <option key={item} value={item}>
-              {item[0].toUpperCase() + item.slice(1)}
-            </option>
+      <ListToolbar
+        search={search}
+        onSearch={(value) => { setSearch(value); setPage(1) }}
+        searchHint="Searches titles and tags."
+        filters={filters}
+        values={{ kind, status, category: categoryId, attention: attention ? '1' : '' }}
+        onFilter={setParam}
+        onClearAll={clearFilters}
+      >
+        <SelectField label="Sort" className="min-w-[12rem]" value={sort} onChange={(event) => setParam('sort', event.target.value === 'edited' ? '' : event.target.value)}>
+          {SORTS.map(([value, label]) => (
+            <option key={value} value={value}>{label}</option>
           ))}
         </SelectField>
-        <SelectField label="Category" value={categoryId ?? ''} onChange={(event) => setFilter('category', event.target.value)}>
-          <option value="">All categories</option>
-          {categories?.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </SelectField>
-        <label className="flex cursor-pointer items-center gap-1 py-1">
-          <input type="checkbox" className="size-2 cursor-pointer accent-primary" checked={attention} onChange={(event) => setFilter('attention', event.target.checked ? '1' : '')} />
-          <span className="text-caption">Needs attention</span>
-        </label>
-      </div>
+      </ListToolbar>
 
       <div className="mb-2">
         <Notice tone={notice.tone}>{notice.text}</Notice>
       </div>
 
-      {error && !works && (
-        <p role="alert" className="text-ink/80">
-          The works couldn’t load. {error.message} Reload the page to try again.
-        </p>
-      )}
+      {!works && (error ? <LoadError what="works" error={error} /> : <Skeleton rows={6} />)}
 
-      {works && works.length === 0 && (
-        <div className="flex flex-col items-start gap-1.5 rounded-lg border border-ink/10 bg-surface p-3">
-          <p className="font-medium">{filtered ? 'No works match those filters.' : 'No works yet.'}</p>
-          {filtered ? (
-            <Button variant="outline" onClick={() => { setSearch(''); setParams({}, { replace: true }) }}>
-              Clear filters
-            </Button>
+      {works && (
+        <div className="rounded-lg border border-ink/10 bg-surface">
+          {works.length === 0 ? (
+            filtered ? (
+              <EmptyState title="No works match these filters." action={<Button variant="outline" onClick={clearFilters}>Clear all filters</Button>}>
+                Try fewer filters or a shorter search.
+              </EmptyState>
+            ) : (
+              <EmptyState title="No works yet." action={<Button href="/admin/works/new">Add the first work</Button>}>
+                Works you add here appear in the Museum and on the home page once they’re published.
+              </EmptyState>
+            )
           ) : (
-            <Button href="/admin/works/new?kind=artwork" viewTransition={false}>Add the first artwork</Button>
-          )}
-        </div>
-      )}
-
-      {works && works.length > 0 && (
-        <ul className="divide-y divide-ink/10 rounded-lg border border-ink/10 bg-surface">
-          {works.map((work) => (
-            <li key={work.id} className="flex flex-col gap-1 p-1.5 md:flex-row md:items-center md:gap-2">
-              <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                <MediaThumb media={work.cover} className="size-6" />
-                <div className="flex min-w-0 flex-col">
-                  <Link to={`/admin/works/${work.id}`} className="truncate font-medium text-ink no-underline hover:text-primary hover:underline">
-                    {work.title}
-                  </Link>
-                  <span className="text-caption text-ink/65">
-                    {KIND_LABELS[work.kind]}
-                    {work.category && ` · ${work.category.name}`}
-                    {work.year && ` · ${work.year}`}
-                  </span>
-                  {work.problems.length > 0 && (
-                    <span className="text-small text-ink/80">
-                      <span aria-hidden="true">⚠ </span>
-                      {work.problems.map((problem) => problem.message).join(' · ')}
+            <ul className="divide-y divide-ink/10">
+              {shown.map((work) => (
+                <li key={work.id} className="flex flex-col gap-1 p-2 md:flex-row md:items-center md:gap-2">
+                  <Link to={`/admin/works/${work.id}`} className="group flex min-w-0 flex-1 items-center gap-2 rounded-sm no-underline">
+                    <MediaThumb media={work.cover} className="size-6" />
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="truncate font-medium text-primary underline-offset-2 group-hover:underline">{work.title}</span>
+                      <span className="text-caption text-ink/65">
+                        {KIND_LABELS[work.kind]}
+                        {work.category && ` · ${work.category.name}`}
+                        {work.year && ` · ${work.year}`}
+                      </span>
+                      {work.problems.length > 0 && (
+                        <span className="text-caption text-ink/80">
+                          <span aria-hidden="true">⚠ </span>
+                          {work.problems.map((problem) => problem.message).join(' · ')}
+                        </span>
+                      )}
                     </span>
-                  )}
-                </div>
-              </div>
+                    <span aria-hidden="true" className="text-lead text-ink/45 md:hidden">›</span>
+                  </Link>
 
-              <div className="flex items-center gap-2 md:justify-end">
-                <StatusBadge status={work.status} />
-                <Link to={`/admin/works/${work.id}`} className="text-caption text-primary underline-offset-2 hover:underline">
-                  Edit
-                </Link>
-                {work.status === 'archived' ? (
-                  <LinkButton disabled={busy} onClick={() => run(() => setWorkStatus(work.id, 'draft'), `Restored “${work.title}” as a draft.`)}>
-                    Restore
-                  </LinkButton>
-                ) : (
-                  <LinkButton disabled={busy} onClick={() => setToArchive(work)}>
-                    Archive
-                  </LinkButton>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+                  <div className="flex items-center gap-1 md:justify-end">
+                    <StatusBadge status={work.status} />
+                    {work.status === 'archived' ? (
+                      <LinkButton disabled={busy} onClick={() => run(() => setWorkStatus(work.id, 'draft'), `Restored “${work.title}” as a draft.`)} aria-label={`Restore ${work.title} as a draft`}>
+                        Restore
+                      </LinkButton>
+                    ) : (
+                      <LinkButton disabled={busy} onClick={() => setToArchive(work)} aria-label={`Archive ${work.title}`}>
+                        Archive
+                      </LinkButton>
+                    )}
+                    <span aria-hidden="true" className="hidden text-lead text-ink/45 md:inline">›</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Pager page={page} total={works.length} onPage={setPage} noun="work" />
+        </div>
       )}
 
       <ConfirmDialog
@@ -194,9 +184,7 @@ export default function Works() {
         onCancel={() => setToArchive(null)}
         onConfirm={() => run(() => archiveWork(toArchive.id), `Archived “${toArchive.title}”. Filter by Archived to restore it.`)}
       >
-        <p>
-          It comes off the public site. Nothing is deleted, and you can restore it from the Archived filter.
-        </p>
+        <p>It comes off the public site. Nothing is deleted, and you can restore it from the Archived filter.</p>
       </ConfirmDialog>
     </>
   )

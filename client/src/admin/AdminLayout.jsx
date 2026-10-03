@@ -16,9 +16,7 @@ const SECTIONS = [
   { label: 'Works', href: '/admin/works' },
   { label: 'Media', href: '/admin/media' },
   { label: 'Categories', href: '/admin/categories' },
-  { label: 'Site text', href: '/admin/content' },
-  { label: 'Links', href: '/admin/links' },
-  { label: 'Brand', href: '/admin/brand' },
+  { label: 'Site settings', href: '/admin/settings' },
 ]
 
 export default function AdminLayout() {
@@ -55,8 +53,8 @@ export default function AdminLayout() {
 
       <aside className="sticky top-0 z-10 border-b border-ink/10 bg-surface lg:h-svh lg:border-r lg:border-b-0">
         <div className="flex h-full flex-col">
-          <div className="flex items-center justify-between gap-2 px-2 py-1.5">
-            <Link to="/admin" className="flex items-center gap-1.5 no-underline">
+          <div className="flex items-center justify-between gap-2 px-2 py-1">
+            <Link to="/admin" className="flex min-h-[2.75rem] items-center gap-2 no-underline">
               <img className="block h-[26px] w-[34px] object-contain" src={logoMark} alt="" width="34" height="26" />
               <span className="flex flex-col">
                 <span className="text-caption font-medium tracking-widest text-ink">LUINSOMNIAC</span>
@@ -64,16 +62,25 @@ export default function AdminLayout() {
               </span>
             </Link>
 
-            <button
-              type="button"
-              className="flex size-5 cursor-pointer items-center justify-center rounded-sm text-ink hover:bg-ink/5 lg:hidden"
-              aria-expanded={menuOpen}
-              aria-controls="admin-nav"
-              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-              onClick={() => setMenuOpen((open) => !open)}
-            >
-              <MenuIcon open={menuOpen} />
-            </button>
+            {/* Square, 48px, with a tooltip on hover and focus (icon-only). */}
+            <span className="group relative lg:hidden">
+              <button
+                type="button"
+                className="flex size-6 cursor-pointer items-center justify-center rounded-sm text-ink hover:bg-ink/5"
+                aria-expanded={menuOpen}
+                aria-controls="admin-nav"
+                aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+                onClick={() => setMenuOpen((open) => !open)}
+              >
+                <MenuIcon open={menuOpen} />
+              </button>
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute top-full right-0 z-20 mt-0.5 hidden rounded-sm bg-ink px-1 py-0.5 text-caption whitespace-nowrap text-surface group-focus-within:block [@media(hover:hover)]:group-hover:block"
+              >
+                {menuOpen ? 'Close menu' : 'Open menu'}
+              </span>
+            </span>
           </div>
 
           <div id="admin-nav" className={`${menuOpen ? 'flex' : 'hidden'} flex-1 flex-col lg:flex`}>
@@ -84,7 +91,7 @@ export default function AdminLayout() {
                   to={section.href}
                   end={section.end}
                   className={({ isActive }) =>
-                    `rounded-sm px-1.5 py-1 font-medium leading-[1.4] no-underline transition-colors ${
+                    `flex min-h-[2.75rem] items-center rounded-sm px-1.5 font-medium leading-[1.4] no-underline transition-colors duration-150 ease-out ${
                       isActive ? 'bg-primary/10 text-primary' : 'text-ink hover:bg-ink/5'
                     }`
                   }
@@ -100,10 +107,10 @@ export default function AdminLayout() {
                 <span className="block truncate font-mono text-small">{session.email}</span>
               </p>
               <div className="flex items-center gap-2 text-caption">
-                <a href={import.meta.env.BASE_URL} target="_blank" rel="noreferrer" className="text-primary underline-offset-2 hover:underline">
-                  View site ↗
+                <a href={import.meta.env.BASE_URL} target="_blank" rel="noreferrer" className="inline-flex min-h-[2.75rem] items-center text-primary underline-offset-2 hover:underline">
+                  View the site ↗
                 </a>
-                <button type="button" onClick={signOut} className="cursor-pointer text-ink/65 underline-offset-2 hover:text-ink hover:underline">
+                <button type="button" onClick={signOut} className="inline-flex min-h-[2.75rem] cursor-pointer items-center text-ink/65 underline-offset-2 hover:text-ink hover:underline">
                   Sign out
                 </button>
               </div>

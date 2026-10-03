@@ -1,22 +1,43 @@
-import { useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import Button from '../../components/Button.jsx'
 import { createCategory, deleteCategory, listCategories, reorderCategories, updateCategory, useApi } from '../../api/index.js'
 import AdminPageHeader from '../AdminPageHeader.jsx'
-import { ConfirmDialog, LinkButton, Notice, TextField } from '../ui.jsx'
+import {
+  borderFor,
+  Button,
+  ConfirmDialog,
+  EmptyState,
+  FieldError,
+  focusField,
+  LinkButton,
+  LoadError,
+  Notice,
+  readDraft,
+  rules,
+  Skeleton,
+  TextField,
+  useDraft,
+  useValidation,
+} from '../ui.jsx'
 
-// The Museum's filter chips, in the order they appear. Renaming is inline:
-// edit the name and leave the field (or press Enter) to save. Order is set
-// with Up and Down buttons, which work from the keyboard and on touch, unlike
-// dragging.
+// The Museum's filter chips, in the order they appear (page pattern:
+// Settings). Renaming is in place: edit the name and press Enter or leave the
+// field to save; Escape puts the old name back. Order is set with Move up and
+// Move down, which work from the keyboard and on touch, unlike dragging.
+
+const DRAFT_KEY = 'new-category'
+const checkName = rules.required('Give the category a name.')
 
 export default function Categories() {
   const { data: categories, error } = useApi(listCategories, [])
   const [toDelete, setToDelete] = useState(null)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState({ tone: 'info', text: '' })
-  const [newName, setNewName] = useState('')
-  const [addError, setAddError] = useState('')
+  const [newName, setNewName] = useState(() => readDraft(DRAFT_KEY)?.value ?? '')
+  const validation = useValidation({ name: checkName })
+  const nameHeaderId = useId()
+
+  useDraft(DRAFT_KEY, newName, newName.trim() !== '')
 
   async function move(index, by) {
     const ids = categories.map((category) => category.id)
@@ -31,13 +52,14 @@ export default function Categories() {
 
   async function add(event) {
     event.preventDefault()
-    setAddError('')
+    if (validation.checkAll({ name: newName })) return focusField('name')
     try {
       await createCategory({ name: newName })
       setNewName('')
       setNotice({ tone: 'info', text: 'Added the category at the end.' })
     } catch (err) {
-      setAddError(err.message)
+      validation.set('name', err.message)
+      focusField('name')
     }
   }
 
@@ -56,34 +78,57 @@ export default function Categories() {
 
   return (
     <>
-      <AdminPageHeader title="Categories">Rename and reorder the filter chips on the Museum page.</AdminPageHeader>
-
-      <div className="mb-2">
-        <Notice tone={notice.tone}>{notice.text}</Notice>
-      </div>
-
-      {error && !categories && <p role="alert" className="text-ink/80">The categories couldn’t load. {error.message} Reload the page to try again.</p>}
+      <AdminPageHeader title="Categories">The filter chips on the Museum page, in this order. Each work can be in one.</AdminPageHeader>
 
       <div className="flex max-w-[40rem] flex-col gap-3">
+        <Notice tone={notice.tone}>{notice.text}</Notice>
+
+        {!categories && (error ? <LoadError what="categories" error={error} /> : <Skeleton rows={4} />)}
+
         {categories && (
-          <ol className="divide-y divide-ink/10 rounded-lg border border-ink/10 bg-surface">
-            {categories.map((category, index) => (
-              <CategoryRow
-                key={category.id}
-                category={category}
-                isFirst={index === 0}
-                isLast={index === categories.length - 1}
-                onMove={(by) => move(index, by)}
-                onDelete={() => setToDelete(category)}
-                onSaved={() => setNotice({ tone: 'info', text: 'Saved.' })}
-              />
-            ))}
-          </ol>
+          <div className="rounded-lg border border-ink/10 bg-surface">
+            {categories.length === 0 ? (
+              <EmptyState title="No categories yet.">
+                Categories become the filter chips on the Museum page. Add the first one below.
+              </EmptyState>
+            ) : (
+              <>
+                <div className="flex gap-2 border-b border-ink/10 px-1.5 py-1 text-caption font-medium">
+                  <span id={nameHeaderId} className="flex-1">Name</span>
+                  <span>Works</span>
+                </div>
+                <ol className="divide-y divide-ink/10">
+                  {categories.map((category, index) => (
+                    <CategoryRow
+                      key={category.id}
+                      category={category}
+                      labelledBy={nameHeaderId}
+                      isFirst={index === 0}
+                      isLast={index === categories.length - 1}
+                      onMove={(by) => move(index, by)}
+                      onDelete={() => setToDelete(category)}
+                      onSaved={() => setNotice({ tone: 'info', text: 'Saved.' })}
+                    />
+                  ))}
+                </ol>
+              </>
+            )}
+          </div>
         )}
 
-        <form onSubmit={add} className="flex items-end gap-1" noValidate>
-          <TextField className="flex-1" label="New category" value={newName} onChange={(event) => { setNewName(event.target.value); setAddError('') }} error={addError} />
-          <Button type="submit" disabled={!newName.trim()}>Add category</Button>
+        <form onSubmit={add} className="flex items-start gap-1" noValidate>
+          <TextField
+            className="flex-1"
+            label="New category"
+            name="name"
+            required
+            value={newName}
+            onChange={(event) => { setNewName(event.target.value); validation.clear('name') }}
+            onBlur={validation.blur('name', newName)}
+            error={validation.errors.name}
+          />
+          {/* Lined up with the input, under the label, so an error below doesn't move it. */}
+          <Button type="submit" className="mt-[1.65rem]">Add category</Button>
         </form>
       </div>
 
@@ -95,18 +140,25 @@ export default function Categories() {
         onCancel={() => setToDelete(null)}
         onConfirm={confirmDelete}
       >
-        <p>The filter chip disappears from the Museum. Only empty categories can be removed.</p>
+        <p>The filter chip disappears from the Museum. Only categories with no works can be removed.</p>
       </ConfirmDialog>
     </>
   )
 }
 
-function CategoryRow({ category, isFirst, isLast, onMove, onDelete, onSaved }) {
+function CategoryRow({ category, labelledBy, isFirst, isLast, onMove, onDelete, onSaved }) {
   const [name, setName] = useState(category.name)
   const [error, setError] = useState('')
-  const inputId = `category-${category.id}`
+  const cancelled = useRef(false)
+  const countId = `category-${category.id}-count`
 
   async function save() {
+    if (cancelled.current) {
+      cancelled.current = false
+      return
+    }
+    const message = checkName(name)
+    if (message) return setError(message)
     if (name.trim() === category.name) return
     try {
       await updateCategory(category.id, { name })
@@ -118,33 +170,36 @@ function CategoryRow({ category, isFirst, isLast, onMove, onDelete, onSaved }) {
   }
 
   return (
-    <li className="flex flex-col gap-0.5 p-1.5">
-      <div className="flex items-center gap-1.5">
-        <label htmlFor={inputId} className="sr-only">Name of category {category.name}</label>
+    <li className="flex flex-col gap-0.5 p-2">
+      <div className="flex flex-wrap items-center gap-x-1.5">
         <input
-          id={inputId}
           value={name}
+          aria-labelledby={labelledBy}
+          aria-describedby={countId}
           aria-invalid={error ? true : undefined}
           onChange={(event) => { setName(event.target.value); setError('') }}
           onBlur={save}
-          onKeyDown={(event) => event.key === 'Enter' && event.currentTarget.blur()}
-          className={`min-w-0 flex-1 rounded-sm border bg-surface px-1 py-0.5 hover:border-ink/45 focus-visible:border-primary ${error ? 'border-2 border-accent' : 'border-ink/25'}`}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur()
+            if (event.key === 'Escape') {
+              cancelled.current = true
+              setName(category.name)
+              setError('')
+              event.currentTarget.blur()
+            }
+          }}
+          className={`min-h-[2.75rem] min-w-[10rem] flex-1 rounded-sm border bg-surface px-1 py-0.5 text-body text-ink hover:border-ink/45 focus-visible:border-primary ${borderFor(error)}`}
         />
-        <Link to={`/admin/works?category=${category.id}`} className="shrink-0 text-caption text-ink/65 underline-offset-2 hover:underline">
+        <Link id={countId} to={`/admin/works?category=${category.id}`} className="inline-flex min-h-[2.75rem] shrink-0 items-center text-caption text-primary underline-offset-2 hover:underline">
           {category.workCount} {category.workCount === 1 ? 'work' : 'works'}
         </Link>
         <span className="flex shrink-0 gap-1">
-          <LinkButton disabled={isFirst} onClick={() => onMove(-1)} aria-label={`Move ${category.name} up`}>Up</LinkButton>
-          <LinkButton disabled={isLast} onClick={() => onMove(1)} aria-label={`Move ${category.name} down`}>Down</LinkButton>
+          <LinkButton disabled={isFirst} onClick={() => onMove(-1)} aria-label={`Move ${category.name} up`}>Move up</LinkButton>
+          <LinkButton disabled={isLast} onClick={() => onMove(1)} aria-label={`Move ${category.name} down`}>Move down</LinkButton>
           <LinkButton onClick={onDelete} aria-label={`Remove ${category.name}`}>Remove</LinkButton>
         </span>
       </div>
-      {error && (
-        <p role="alert" className="text-caption font-medium">
-          <span aria-hidden="true">⚠ </span>
-          {error}
-        </p>
-      )}
+      <FieldError>{error}</FieldError>
     </li>
   )
 }

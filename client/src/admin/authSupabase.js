@@ -98,7 +98,7 @@ export function getSession() {
   return state.session
 }
 
-const WRONG = 'That email and password don’t match an admin account.'
+const WRONG = 'That email and password don’t match an admin account. Check both and try again, or reset your password.'
 
 // Resolves with the session, or rejects with a message fit to show the user.
 // Wrong password, unknown email and "not an admin" all say the same thing, so

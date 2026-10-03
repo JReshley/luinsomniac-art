@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom'
-import Button from '../../components/Button.jsx'
 import AdminPageHeader from '../AdminPageHeader.jsx'
 import { useSession } from '../auth.js'
-import { formatBytes, getDashboard, STATUSES, useApi } from '../../api/index.js'
+import { Button, LoadError, Skeleton } from '../ui.jsx'
+import { formatBytes, getDashboard, useApi } from '../../api/index.js'
 
-// The first page after signing in: what needs fixing, how much there is in
-// each state, and shortcuts to the common jobs.
+// The first page after signing in. The to-do list comes first, since that's
+// what an admin opens it for; the counts, storage and recent edits sit beside
+// it for a glance.
 
-const STATUS_LABELS = { draft: 'Drafts', ready: 'Ready', published: 'Published', archived: 'Archived' }
 const KIND_LABELS = { artwork: 'artwork', model: '3D model', video: 'video' }
 const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`
 
@@ -18,67 +18,48 @@ export default function Dashboard() {
   const session = useSession()
   const { data, error } = useApi(getDashboard, [])
 
-  const actions = (
-    <>
-      <Button href="/admin/works/new?kind=artwork" viewTransition={false}>New artwork</Button>
-      <Button href="/admin/works/new?kind=model" variant="outline" viewTransition={false}>New 3D model</Button>
-      <Button href="/admin/works/new?kind=video" variant="outline" viewTransition={false}>New video</Button>
-    </>
-  )
+  const actions = <Button href="/admin/works/new">Add work</Button>
 
   if (!data) {
     return (
       <>
         <AdminPageHeader title={`Hi, ${session.name}`} actions={actions} />
-        {error && (
-          <p role="alert" className="text-ink/80">
-            The dashboard couldn’t load. {error.message} Reload the page to try again.
-          </p>
-        )}
+        {error ? <LoadError what="dashboard" error={error} /> : <Skeleton rows={5} className="lg:max-w-[66%]" />}
       </>
     )
   }
 
   const { total, byStatus, byKind, needsAttention, storage, activity } = data
+  // 'ready' is private like a draft, and the admin shows it as one.
+  const counts = [
+    ['draft', 'Drafts', byStatus.draft + byStatus.ready],
+    ['published', 'Published', byStatus.published],
+    ['archived', 'Archived', byStatus.archived],
+  ]
 
   return (
     <>
       <AdminPageHeader title={`Hi, ${session.name}`} actions={actions}>
-        {plural(total, 'work')}: {Object.entries(byKind).map(([kind, count]) => plural(count, KIND_LABELS[kind])).join(', ')}.
+        {plural(total, 'work')} on file: {Object.entries(byKind).map(([kind, count]) => plural(count, KIND_LABELS[kind])).join(', ')}.
       </AdminPageHeader>
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div className="flex flex-col gap-3">
-          <Panel title="Works by status">
-            <ul className="grid grid-cols-2 gap-1 md:grid-cols-4">
-              {STATUSES.map((status) => (
-                <li key={status}>
-                  <Link
-                    to={`/admin/works?status=${status}`}
-                    className="flex flex-col rounded-sm border border-ink/10 px-1.5 py-1 no-underline hover:border-primary/50 hover:bg-primary/5"
-                  >
-                    <span className="text-heading font-bold tabular-nums">{byStatus[status]}</span>
-                    <span className="text-caption text-ink/65">{STATUS_LABELS[status]}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </Panel>
-
-          <Panel
-            title="Needs attention"
-            count={needsAttention.length}
-            footer={
-              needsAttention.length > ATTENTION_LIMIT && (
-                <Link to="/admin/works?attention=1" className="text-caption text-primary underline-offset-2 hover:underline">
-                  See all {needsAttention.length} →
-                </Link>
-              )
-            }
-          >
-            {needsAttention.length === 0 ? (
-              <p className="text-ink/65">Nothing to fix. Every work has its files and can be published.</p>
-            ) : (
+        <Panel
+          title="To do"
+          count={needsAttention.length}
+          footer={
+            needsAttention.length > ATTENTION_LIMIT && (
+              <Link to="/admin/works?attention=1" className="inline-flex min-h-[2.75rem] items-center self-start text-caption text-primary underline-offset-2 hover:underline">
+                See all {needsAttention.length} →
+              </Link>
+            )
+          }
+        >
+          {needsAttention.length === 0 ? (
+            <p className="text-ink/65">All done. Every work has its files and can be published.</p>
+          ) : (
+            <>
+              <p className="text-caption text-ink/65">Works missing a file or something they need before they can be published.</p>
               <ul className="divide-y divide-ink/10">
                 {needsAttention.slice(0, ATTENTION_LIMIT).map((work) => (
                   <li key={work.id}>
@@ -103,19 +84,25 @@ export default function Dashboard() {
                   </li>
                 ))}
               </ul>
-            )}
-          </Panel>
-        </div>
+            </>
+          )}
+        </Panel>
 
         <div className="flex flex-col gap-3">
-          <Panel title="Storage">
-            <StorageMeter {...storage} />
-            <p className="text-caption text-ink/65">
-              Uploads only; Drive and YouTube files don’t count. Bandwidth is on the{' '}
-              <a href="https://supabase.com/dashboard" target="_blank" rel="noreferrer" className="text-primary underline-offset-2 hover:underline">
-                Supabase dashboard ↗
-              </a>
-            </p>
+          <Panel title="Works">
+            <ul className="grid grid-cols-3 gap-1">
+              {counts.map(([status, label, count]) => (
+                <li key={status}>
+                  <Link
+                    to={`/admin/works?status=${status}`}
+                    className="flex flex-col rounded-sm border border-ink/10 px-1.5 py-1 no-underline hover:border-primary/50 hover:bg-primary/5"
+                  >
+                    <span className="text-lead font-bold tabular-nums">{count}</span>
+                    <span className="text-caption text-ink/65">{label}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </Panel>
 
           <Panel title="Recent activity">
@@ -136,6 +123,11 @@ export default function Dashboard() {
               </ul>
             )}
           </Panel>
+
+          <Panel title="Upload storage">
+            <StorageMeter {...storage} />
+            <p className="text-caption text-ink/65">Drive and YouTube files don’t count.</p>
+          </Panel>
         </div>
       </div>
     </>
@@ -144,8 +136,8 @@ export default function Dashboard() {
 
 function Panel({ title, count, footer, children }) {
   return (
-    <section className="flex flex-col gap-1.5 rounded-lg border border-ink/10 bg-surface p-2">
-      <h2 className="flex items-center gap-1 font-bold">
+    <section className="flex flex-col gap-2 rounded-lg border border-ink/10 bg-surface p-2">
+      <h2 className="flex items-center gap-1 leading-[1.25] font-bold">
         {title}
         {count > 0 && <span className="rounded-full bg-accent/20 px-1 font-mono text-small tabular-nums">{count}</span>}
       </h2>

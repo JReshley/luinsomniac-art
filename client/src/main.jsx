@@ -1,6 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, Navigate, RouterProvider } from 'react-router-dom'
 import App from './App.jsx'
 import Home from './pages/Home.jsx'
 import Museum from './pages/Museum.jsx'
@@ -53,9 +53,11 @@ const router = createBrowserRouter(
             { path: 'works/:id', lazy: page(() => import('./admin/pages/WorkEditor.jsx')), handle: { title: 'Edit work' } },
             { path: 'media', lazy: page(() => import('./admin/pages/Media.jsx')), handle: { title: 'Media' } },
             { path: 'categories', lazy: page(() => import('./admin/pages/Categories.jsx')), handle: { title: 'Categories' } },
-            { path: 'content', lazy: page(() => import('./admin/pages/SiteText.jsx')), handle: { title: 'Site text' } },
-            { path: 'links', lazy: page(() => import('./admin/pages/Links.jsx')), handle: { title: 'Links' } },
-            { path: 'brand', lazy: page(() => import('./admin/pages/Brand.jsx')), handle: { title: 'Brand' } },
+            { path: 'settings', lazy: page(() => import('./admin/pages/SiteSettings.jsx')), handle: { title: 'Site settings' } },
+            // The old addresses of the pages Site settings replaced, for bookmarks.
+            { path: 'content', element: <Navigate to="/admin/settings" replace /> },
+            { path: 'links', element: <Navigate to="/admin/settings" replace /> },
+            { path: 'brand', element: <Navigate to="/admin/settings" replace /> },
             { path: '*', lazy: page(() => import('./admin/pages/AdminStub.jsx')), handle: { title: 'Not found', note: 'There’s no admin page at this address.' } },
           ],
         },

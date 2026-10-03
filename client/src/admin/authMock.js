@@ -79,7 +79,7 @@ export async function signIn(email, password) {
   if (!address || !password) throw new Error('Enter your email and password.')
 
   const admin = ADMINS[address.split('@')[0]]
-  if (!admin) throw new Error('That email and password don’t match an admin account.')
+  if (!admin) throw new Error('That email and password don’t match an admin account. Check both and try again, or reset your password.')
 
   const session = { ...admin, email: address }
   write(JSON.stringify(session))

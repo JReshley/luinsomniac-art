@@ -8,6 +8,11 @@
 //   primary — blue, the default
 //   outline — 2px ink border; pass onDark on navy bands, where ink is invisible
 //   accent  — orange pill, navy text. One per page.
+//   danger  — red, for the confirm button of a delete or archive;
+//             danger-outline for the button that asks first.
+//
+// `calm` swaps the springy hover and squash for a plain colour fade. The admin
+// uses it: product chrome there shouldn't bounce.
 //
 // Give it `href` and it renders a link; otherwise a <button>. An internal path
 // like "/museum" becomes a router <Link>, so the page changes without a full
@@ -24,19 +29,24 @@ const BASE =
   'transition-[color,background-color,border-color,translate,scale] duration-200 ease-spring ' +
   'motion-safe:hover:-translate-y-0.25 motion-safe:active:translate-y-0 motion-safe:active:scale-x-105 motion-safe:active:scale-y-90'
 
+// Colour only, at the 150ms motion token.
+const CALM = 'inline-flex items-center justify-center gap-1 whitespace-nowrap px-3 py-1.5 font-medium leading-[1.4] no-underline transition-colors duration-150 ease-out'
+
 const VARIANTS = {
   primary: 'rounded-sm bg-primary text-surface hover:bg-primary/90',
   outline: 'rounded-sm border-2 border-ink text-ink hover:bg-ink/5',
   accent: 'rounded-full bg-accent text-ink hover:bg-accent/90',
+  danger: 'rounded-sm bg-danger text-surface hover:bg-danger/90',
+  'danger-outline': 'rounded-sm border-2 border-danger text-danger hover:bg-danger/5',
 }
 
 // Blue never sits on navy (2.7 : 1), so on a dark band the outline turns
 // off-white instead.
 const OUTLINE_ON_DARK = 'rounded-sm border-2 border-bg/65 text-bg hover:border-bg'
 
-export default function Button({ variant = 'primary', onDark = false, href, viewTransition = true, className = '', children, ...rest }) {
+export default function Button({ variant = 'primary', onDark = false, calm = false, href, viewTransition = true, className = '', children, ...rest }) {
   const look = variant === 'outline' && onDark ? OUTLINE_ON_DARK : VARIANTS[variant]
-  const classes = `${BASE} ${look} ${className}`
+  const classes = `${calm ? CALM : BASE} ${look} ${className}`
 
   if (href?.startsWith('/')) {
     return (
