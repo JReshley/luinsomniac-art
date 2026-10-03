@@ -3,15 +3,17 @@
 //   GET    /api/admin/works/:id      getWork(id)
 //   POST   /api/admin/works          createWork(input)
 //   PATCH  /api/admin/works/:id      updateWork(id, changes)
+//   DELETE /api/admin/works/:id      deleteWork(id)
 //
-// There's no delete. "Delete" in the admin archives, so a work can always be
-// brought back (setWorkStatus(id, 'draft')).
+// Taking a work off the site archives it, so it can be brought back
+// (setWorkStatus(id, 'draft')). Only an archived work can be deleted for good.
 
 import { ApiError, findRow, logActivity, mutate, newId, query } from './db.js'
 import { is3dCategory, KINDS, PASSES, STATUSES, publishBlockers } from './shared.js'
 
 const PASS_KEYS = PASSES.map(([key]) => key)
-import { resolveMediaUrls } from './media.js'
+import { resolveMediaUrls, usage } from './media.js'
+import { deleteBlob } from './blobs.js'
 import { slugify } from './seed.js'
 
 // The fields a caller may set. Anything else in the input is ignored, the way
@@ -235,8 +237,32 @@ export function setFeaturedWorks(ids) {
   })
 }
 
-// What the admin calls "Delete".
 export const archiveWork = (id) => setWorkStatus(id, 'archived')
+
+// Deletes an archived work for good, with its gallery links, details and the
+// files only it used. Files another work or a setting still uses stay.
+// Resolves to { removedFiles }.
+export async function deleteWork(id) {
+  const removedIds = await mutate((db, ctx) => {
+    const work = findRow(db.works, id, 'work')
+    if (work.status !== 'archived') invalid('status', `Archive “${work.title}” before deleting it.`)
+    const fileIds = db.media.filter((media) => usage(db, media.id).some((use) => use.workId === id)).map((media) => media.id)
+
+    db.works = db.works.filter((row) => row.id !== id)
+    db.workMedia = db.workMedia.filter((link) => link.workId !== id)
+    db.modelDetails = db.modelDetails.filter((d) => d.workId !== id)
+    db.videoDetails = db.videoDetails.filter((d) => d.workId !== id)
+    for (const d of db.videoDetails) if (d.relatedWorkId === id) d.relatedWorkId = null
+
+    const removed = fileIds.filter((mediaId) => usage(db, mediaId).length === 0)
+    db.media = db.media.filter((media) => !removed.includes(media.id))
+    const files = removed.length ? ` and ${removed.length} file${removed.length === 1 ? '' : 's'} only it used` : ''
+    logActivity(db, ctx, 'delete', 'work', id, `Deleted “${work.title}”${files}`)
+    return removed
+  })
+  for (const mediaId of removedIds) await deleteBlob(mediaId)
+  return { removedFiles: removedIds.length }
+}
 
 // --- Helpers --------------------------------------------------------------
 

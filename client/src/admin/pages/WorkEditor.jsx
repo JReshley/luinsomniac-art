@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useBlocker, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   archiveWork,
+  deleteWork,
   createWork,
   getWork,
   is3dCategory,
@@ -273,6 +274,7 @@ function WorkForm({ kind, work }) {
   const [error, setError] = useState(null)
   const [justSaved, setJustSaved] = useState(false)
   const [confirmArchive, setConfirmArchive] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   // Which kind the gallery picker is open for: 'image', 'video' or closed.
   const [galleryPicker, setGalleryPicker] = useState(null)
   // Files added from the gallery picker, until the library reload brings them in.
@@ -420,6 +422,22 @@ function WorkForm({ kind, work }) {
       setError(err)
       setBusy(false)
       setConfirmArchive(false)
+    }
+  }
+
+  // Only offered once it's archived. Goes back to the list, which loads
+  // without it.
+  async function remove() {
+    setBusy(true)
+    try {
+      await deleteWork(work.id)
+      dirtyRef.current = false
+      clearDraft(draftKey)
+      navigate('/admin/works?status=archived', { viewTransition: false })
+    } catch (err) {
+      setError(err)
+      setBusy(false)
+      setConfirmDelete(false)
     }
   }
 
@@ -667,7 +685,7 @@ function WorkForm({ kind, work }) {
 
           {archived ? (
             <div className="flex flex-col items-start gap-1">
-              <p className="text-caption">Archived. It’s hidden from the site, and nothing is deleted.</p>
+              <p className="text-caption">Archived. It’s hidden from the site. Restore it, or delete it for good at the bottom of the page.</p>
               <Button variant="outline" disabled={busy} onClick={restore}>Restore as draft</Button>
             </div>
           ) : (
@@ -730,6 +748,17 @@ function WorkForm({ kind, work }) {
           </Section>
         )}
 
+        {!isNew && archived && (
+          <Section title="Delete">
+            <div className="flex flex-col items-start gap-0.5">
+              <p className="text-caption text-ink/80">Removes it for good, with any files only it uses. This can’t be undone.</p>
+              <Button variant="danger-outline" disabled={busy} onClick={() => setConfirmDelete(true)}>
+                Delete forever
+              </Button>
+            </div>
+          </Section>
+        )}
+
         <div className="sticky bottom-0 z-[5] -mx-2 mt-3 flex flex-wrap items-center gap-1 border-t border-ink/10 bg-bg/95 px-2 py-2 md:-mx-3 md:px-3 lg:-mx-5 lg:px-5">
           <Button type="submit" disabled={busy}>{busy ? 'Saving…' : saveLabel}</Button>
           <Button href="/admin/works" variant="outline">Cancel</Button>
@@ -751,6 +780,20 @@ function WorkForm({ kind, work }) {
         >
           <p>It comes off the public site. Nothing is deleted, and you can restore it from the Archived filter on the works list.</p>
           {dirty && <p className="mt-1 font-medium">Your unsaved changes on this page will be lost.</p>}
+        </ConfirmDialog>
+      )}
+
+      {!isNew && (
+        <ConfirmDialog
+          open={confirmDelete}
+          title={`Delete “${work.title}” forever?`}
+          confirmLabel="Delete forever"
+          busy={busy}
+          typeToConfirm={work.title}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={remove}
+        >
+          <p>This can’t be undone. The work, its details and any files only it uses are removed. Files other works or the site settings use stay in the media library.</p>
         </ConfirmDialog>
       )}
 

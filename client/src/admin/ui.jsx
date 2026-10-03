@@ -523,18 +523,41 @@ export function Dialog({ open, onClose, title, children, wide = false, side = fa
 // A yes/no question with a button named for what it does ("Archive Encore"),
 // never "OK". Cancel has focus first so the safe choice is the default, and
 // the confirm button is red when it takes something away.
-export function ConfirmDialog({ open, title, children, confirmLabel, busy, onConfirm, onCancel, destructive = true }) {
+// `typeToConfirm`: text (a title) that has to be typed before the confirm
+// button works, for things that can't be undone.
+export function ConfirmDialog({ open, title, children, confirmLabel, busy, onConfirm, onCancel, destructive = true, typeToConfirm }) {
   return (
     <Dialog open={open} onClose={onCancel} title={title}>
+      <ConfirmBody {...{ children, confirmLabel, busy, onConfirm, onCancel, destructive, typeToConfirm }} />
+    </Dialog>
+  )
+}
+
+// Inside the dialog, which only renders it while open, so the typed text
+// starts empty each time.
+function ConfirmBody({ children, confirmLabel, busy, onConfirm, onCancel, destructive, typeToConfirm }) {
+  const [typed, setTyped] = useState('')
+  const matches = !typeToConfirm || typed.trim() === typeToConfirm.trim()
+  return (
+    <>
       <div className="text-ink/80">{children}</div>
+      {typeToConfirm && (
+        <TextField
+          label={`Type “${typeToConfirm}” to confirm`}
+          value={typed}
+          onChange={(event) => setTyped(event.target.value)}
+          autoComplete="off"
+          spellCheck={false}
+        />
+      )}
       <div className="flex flex-wrap justify-end gap-1">
         <Button variant="outline" onClick={onCancel} autoFocus>
           Cancel
         </Button>
-        <Button variant={destructive ? 'danger' : 'primary'} onClick={onConfirm} disabled={busy}>
+        <Button variant={destructive ? 'danger' : 'primary'} onClick={onConfirm} disabled={busy || !matches}>
           {busy ? 'Working…' : confirmLabel}
         </Button>
       </div>
-    </Dialog>
+    </>
   )
 }

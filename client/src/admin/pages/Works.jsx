@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { archiveWork, listCategories, listWorks, setWorkStatus, useApi } from '../../api/index.js'
+import { archiveWork, deleteWork, listCategories, listWorks, setWorkStatus, useApi } from '../../api/index.js'
 import AdminPageHeader from '../AdminPageHeader.jsx'
 import { MediaThumb } from '../MediaPicker.jsx'
 import {
@@ -42,6 +42,7 @@ export default function Works() {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [toArchive, setToArchive] = useState(null)
+  const [toDelete, setToDelete] = useState(null)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState({ tone: 'info', text: '' })
 
@@ -89,6 +90,22 @@ export default function Works() {
     } finally {
       setBusy(false)
       setToArchive(null)
+    }
+  }
+
+  async function remove(work) {
+    setBusy(true)
+    setNotice({ tone: 'info', text: '' })
+    try {
+      const { removedFiles } = await deleteWork(work.id)
+      api.setData((rows) => rows?.filter((row) => row.id !== work.id))
+      const files = removedFiles ? `, with ${removedFiles} file${removedFiles === 1 ? '' : 's'} only it used` : ''
+      setNotice({ tone: 'info', text: `Deleted “${work.title}”${files}.` })
+    } catch (err) {
+      setNotice({ tone: 'error', text: err.message })
+    } finally {
+      setBusy(false)
+      setToDelete(null)
     }
   }
 
@@ -166,9 +183,14 @@ export default function Works() {
                   <div className="flex items-center gap-1 md:justify-end">
                     <StatusBadge status={work.status} />
                     {work.status === 'archived' ? (
-                      <LinkButton disabled={busy} onClick={() => run(() => setWorkStatus(work.id, 'draft'), `Restored “${work.title}” as a draft.`)} aria-label={`Restore ${work.title} as a draft`}>
-                        Restore
-                      </LinkButton>
+                      <>
+                        <LinkButton disabled={busy} onClick={() => run(() => setWorkStatus(work.id, 'draft'), `Restored “${work.title}” as a draft.`)} aria-label={`Restore ${work.title} as a draft`}>
+                          Restore
+                        </LinkButton>
+                        <LinkButton disabled={busy} onClick={() => setToDelete(work)} aria-label={`Delete ${work.title} forever`} className="enabled:text-danger">
+                          Delete
+                        </LinkButton>
+                      </>
                     ) : (
                       <LinkButton disabled={busy} onClick={() => setToArchive(work)} aria-label={`Archive ${work.title}`}>
                         Archive
@@ -193,6 +215,18 @@ export default function Works() {
         onConfirm={() => run(() => archiveWork(toArchive.id), `Archived “${toArchive.title}”. Filter by Archived to restore it.`)}
       >
         <p>It comes off the public site. Nothing is deleted, and you can restore it from the Archived filter.</p>
+      </ConfirmDialog>
+
+      <ConfirmDialog
+        open={Boolean(toDelete)}
+        title={`Delete “${toDelete?.title}” forever?`}
+        confirmLabel="Delete forever"
+        busy={busy}
+        typeToConfirm={toDelete?.title}
+        onCancel={() => setToDelete(null)}
+        onConfirm={() => remove(toDelete)}
+      >
+        <p>This can’t be undone. The work, its details and any files only it uses are removed. Files other works or the site settings use stay in the media library.</p>
       </ConfirmDialog>
     </>
   )

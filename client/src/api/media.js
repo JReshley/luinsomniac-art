@@ -139,7 +139,7 @@ export async function uploadMedia(file, fields = {}) {
 // --- Reading, editing, removing -------------------------------------------
 
 // Where a file is used: [{ workId, title, role }] or [{ setting, role }].
-function usage(db, id) {
+export function usage(db, id) {
   const uses = []
   const title = (workId) => db.works.find((work) => work.id === workId)?.title
   for (const work of db.works) if (work.coverMediaId === id) uses.push({ workId: work.id, title: work.title, role: 'cover' })

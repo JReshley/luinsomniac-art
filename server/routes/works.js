@@ -3,17 +3,18 @@ import { Router } from 'express'
 import { pool, transaction } from '../db/pool.js'
 import { logActivity } from '../activity.js'
 import { ApiError, route } from '../errors.js'
-import { resolveMediaUrls } from '../mediaFiles.js'
+import { resolveMediaUrls, usage } from '../mediaFiles.js'
 import { insertRow, loadDb, pick, updateRow } from '../rows.js'
 import {
   activityAction, activitySummary, categoriesOf, FEATURED_LIMIT, galleryRows, is3dCategory, KINDS, placeFeatured, MODEL_FIELDS, presentWork, slugify, uniqueSlug,
   validateModel, validateVideo, validateWork, VIDEO_FIELDS, WORK_FIELDS,
 } from '../workRules.js'
 
-// Works: every artwork, 3D model and video. There's no delete route: the
-// admin's "Delete" sets the status to archived, so a work can always come back.
+// Works: every artwork, 3D model and video. Taking a work off the site archives
+// it, so it can come back; only an archived work can then be deleted for good.
 
 const TABLES = ['works', 'media', 'categories', 'modelDetails', 'videoDetails', 'workMedia', 'admins']
+const USAGE_TABLES = ['media', 'works', 'workMedia', 'modelDetails', 'videoDetails', 'settings']
 // categoryIds is kept in work_categories (saveCategories), not a column.
 const WORK_COLUMNS = [...WORK_FIELDS.filter((field) => field !== 'categoryIds'), 'featuredOrder', 'updatedBy']
 
@@ -207,6 +208,40 @@ export function workRoutes({ storage }) {
 
     const db = await loadDb(pool, TABLES)
     response.json(withUrls(presentWork(db, db.works.find((work) => work.id === id))))
+  }))
+
+  // Deletes an archived work for good. Its categories, gallery links and 3D or
+  // video details go with it (ON DELETE CASCADE), and so do the files only it
+  // used; files another work or a setting still uses stay in the library.
+  // Responds { removedFiles }.
+  router.delete('/:id', route(async (request, response) => {
+    const { id } = request.params
+    const removedPaths = []
+    let removedFiles = 0
+
+    await transaction(async (client) => {
+      const before = await loadDb(client, USAGE_TABLES)
+      const work = before.works.find((item) => item.id === id)
+      if (!work) throw notFound()
+      if (work.status !== 'archived') throw new ApiError('invalid', `Archive “${work.title}” before deleting it.`)
+      const fileIds = [...new Set(before.media.filter((media) => usage(before, media.id).some((use) => use.workId === id)).map((media) => media.id))]
+
+      await client.query('DELETE FROM works WHERE id = $1', [id])
+
+      const after = await loadDb(client, USAGE_TABLES)
+      for (const media of after.media.filter((item) => fileIds.includes(item.id) && usage(after, item.id).length === 0)) {
+        await client.query('DELETE FROM media WHERE id = $1', [media.id])
+        if (media.source === 'supabase') removedPaths.push(media.storagePathOrUrl)
+        removedFiles += 1
+      }
+      const files = removedFiles ? ` and ${removedFiles} file${removedFiles === 1 ? '' : 's'} only it used` : ''
+      await logActivity(client, request.admin.id, 'delete', 'work', id, `Deleted “${work.title}”${files}`)
+    })
+
+    // After the rows are gone, as with a single file: a failed removal leaves
+    // an orphan in the bucket rather than a row pointing at nothing.
+    for (const path of removedPaths) await storage.remove(path).catch((error) => console.error('Could not remove', path, error.message))
+    response.json({ removedFiles })
   }))
 
   return router

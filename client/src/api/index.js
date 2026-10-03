@@ -28,6 +28,7 @@ export const createWork = call('createWork')
 export const updateWork = call('updateWork')
 export const setWorkStatus = call('setWorkStatus')
 export const archiveWork = call('archiveWork')
+export const deleteWork = call('deleteWork')
 export const setFeaturedWorks = call('setFeaturedWorks')
 
 export const addMediaLink = call('addMediaLink')

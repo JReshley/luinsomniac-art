@@ -15,8 +15,9 @@ export const getWork = (id) => request('GET', `/api/admin/works/${enc(id)}`)
 export const createWork = (input) => request('POST', '/api/admin/works', { body: input })
 export const updateWork = (id, changes) => request('PATCH', `/api/admin/works/${enc(id)}`, { body: changes })
 export const setWorkStatus = (id, status) => updateWork(id, { status })
-// What the admin calls "Delete".
 export const archiveWork = (id) => setWorkStatus(id, 'archived')
+// Archived works only; also removes the files only it used. { removedFiles }
+export const deleteWork = (id) => request('DELETE', `/api/admin/works/${enc(id)}`)
 // The home page's featured works, in order (up to 9, published only).
 export const setFeaturedWorks = (ids) => request('PUT', '/api/admin/works/featured', { body: { ids } })
 
