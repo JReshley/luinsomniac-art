@@ -20,3 +20,6 @@ backup*.sql
 # Logs
 *.log
 npm-debug.log*
+
+# Private planning notes
+private/

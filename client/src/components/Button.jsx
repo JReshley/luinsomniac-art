@@ -12,6 +12,8 @@
 // Give it `href` and it renders a link; otherwise a <button>. An internal path
 // like "/museum" becomes a router <Link>, so the page changes without a full
 // reload. Anything else ("#contact", "mailto:", "https://") stays a plain <a>.
+// Router links play the page-change wipe; the admin turns it off with
+// viewTransition={false}.
 
 import { Link } from 'react-router-dom'
 
@@ -32,13 +34,13 @@ const VARIANTS = {
 // off-white instead.
 const OUTLINE_ON_DARK = 'rounded-sm border-2 border-bg/65 text-bg hover:border-bg'
 
-export default function Button({ variant = 'primary', onDark = false, href, className = '', children, ...rest }) {
+export default function Button({ variant = 'primary', onDark = false, href, viewTransition = true, className = '', children, ...rest }) {
   const look = variant === 'outline' && onDark ? OUTLINE_ON_DARK : VARIANTS[variant]
   const classes = `${BASE} ${look} ${className}`
 
   if (href?.startsWith('/')) {
     return (
-      <Link to={href} viewTransition className={classes} {...rest}>
+      <Link to={href} viewTransition={viewTransition} className={classes} {...rest}>
         {children}
       </Link>
     )
