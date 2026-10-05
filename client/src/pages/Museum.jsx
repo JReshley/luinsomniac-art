@@ -28,11 +28,13 @@ export default function Museum() {
   const filters = [ALL, ...(categories ?? []).map((category) => category.name)]
 
   const [filter, setFilter] = useState(ALL)
+  const [search, setSearch] = useState('')
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   // Index into `shown` of the work in the Lightbox, or null when it is closed.
   const [openIndex, setOpenIndex] = useState(null)
 
-  const matching = filter === ALL ? sorted : sorted.filter((work) => work.categories.includes(filter))
+  const matching = (filter === ALL ? sorted : sorted.filter((work) => work.categories.includes(filter)))
+  .filter((work) => work.title.toLowerCase().includes(search.toLowerCase()))
   const shown = matching.slice(0, visibleCount)
 
   function changeFilter(next) {
@@ -54,6 +56,23 @@ export default function Museum() {
 
       <FilterBar options={filters} active={filter} onChange={changeFilter} />
 
+      <div className="flex flex-col gap-1">
+  <label htmlFor="work-search" className="text-small font-medium text-ink">
+    Search works
+  </label>
+  <input
+    id="work-search"
+    type="search"
+    value={search}
+    onChange={(event) => {
+      setSearch(event.target.value)
+      setVisibleCount(PAGE_SIZE)
+    }}
+    placeholder="Search by title..."
+    className="w-full rounded border border-ink/20 bg-white px-3 py-2 text-ink outline-none focus:border-primary"
+  />
+</div>
+
       {/* Announces the new count when a filter or "Load more" changes the grid. */}
       <p aria-live="polite" className="sr-only">
         Showing {shown.length} of {matching.length} works
@@ -61,6 +80,9 @@ export default function Museum() {
 
       {error && !works && <p role="alert" className="text-ink/80">The works couldn’t load. Reload the page to try again.</p>}
       {works?.length === 0 && <p className="text-ink/65">Nothing is on display yet. Check back soon.</p>}
+      {works?.length > 0 && matching.length === 0 && (
+  <p className="text-ink/65">No works match your search.</p>
+)}
       {!works && !error && (
         <LoadingWorks label="Beaming in the collection…">
           <SkeletonCards count={PAGE_SIZE} className="columns-2 gap-2 md:columns-3 lg:columns-4 lg:gap-2.5" />
