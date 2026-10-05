@@ -217,20 +217,94 @@ Repository: https://github.com/JReshley/luinsomniac-art
 
 ## 3. Who wrote what
 
-At least a fifth of this project is code you wrote yourself. Name it, and explain
-it in your own words.
-
-> Group projects: give each member their own heading below, and use your GitHub
-> handle as the heading. You are graded on your own section.
-
 ### Written by me
 
-- **File:**
-- **Commit:**
+- **File:** `client/src/pages/Museum.jsx`, the search box
+- **Commit:** https://github.com/JReshley/luinsomniac-art/commit/ad8f154908fd1b6684ef57983c65ed17674aeec1
+  (my code; Claude's review fixes are in the next commit, see section 1)
+- **The code:**
+
+  ```jsx
+  const [search, setSearch] = useState('')
+
+  const matching = (filter === ALL ? sorted : sorted.filter((work) => work.categories.includes(filter)))
+    .filter((work) => work.title.toLowerCase().includes(search.toLowerCase()))
+  ```
+
+  ```jsx
+  <label htmlFor="work-search">Search works</label>
+  <input
+    id="work-search"
+    type="search"
+    value={search}
+    onChange={(event) => {
+      setSearch(event.target.value)
+      setVisibleCount(PAGE_SIZE)
+    }}
+    placeholder="Search by title..."
+  />
+  ```
+
 - **What it does and why it is built this way:**
+
+  It lets a visitor search for a specific artwork without browsing through all
+  the artworks.
+
+  `search` holds what the visitor typed. The input is controlled: its value
+  comes from that state, and every keystroke updates it. The works are already
+  loaded in the browser, so searching doesn't ask the server for anything. It
+  just filters the list that's already there. Both sides are lowercased, so
+  "lucas" still finds "Low-Poly character Lucas".
+
+  Typing also resets `visibleCount` to the first 8 cards. If I had clicked
+  Load more a few times and then searched, the results should start again from
+  a fresh first page, not carry over the old count.
+
+  The category filter is for when you only want to see one category, and the
+  search is for when you're looking for a certain artwork by title. They work
+  together: the category filter runs first, then the search runs on what's
+  left. So with "2D" selected and "cat" typed, you only see 2D works with "cat"
+  in the title.
+
+  The placeholder is a hint, but it disappears once you start typing. The
+  `<label>`, tied to the input with `htmlFor` and `id`, stays visible and is
+  what a screen reader reads out when someone tabs into the box. Clicking it
+  also puts the cursor in the box.
+
+  When nothing matches, the page says "No works match your search." instead of
+  showing an empty grid.
 
 ### The AI-written part I understand best
 
-- **File:**
-- **Commit:**
+- **File:** `server/routes/public.js`, the `GET /api/works/:slug` route
+- **Commit:** https://github.com/JReshley/luinsomniac-art/commit/389de77e325c12eb43b0a0a60d4867776339020d
+  (where it was added; it now loads only the tables a work needs since
+  https://github.com/JReshley/luinsomniac-art/commit/18bf53aa8154ed72eda2ba6aa60b80aaa1ca1a44)
+- **The code:**
+
+  ```js
+  router.get('/works/:slug', route(async (request, response) => {
+    const db = await load(WORK_TABLES)
+    const row = published(db).find((item) => item.slug === request.params.slug)
+    if (!row) throw new ApiError('not_found', 'There’s no work at this address.')
+    response.json(withUrls(publicWork(db, row)))
+  }))
+  ```
+
 - **What it does and why we kept it:**
+
+  The route gets the data of a certain artwork chosen by the user. The slug is
+  unique to each artwork; it's kind of like the artwork's id, but readable,
+  because it's made from the title. Based on that slug, the route looks for a
+  matching work in the work tables. If there is one, it returns it. If not, it
+  throws an error and says not found.
+
+  It only looks through **published** works (`published(db)` runs before
+  `.find`). Drafts and archived works are not found, because they are only
+  stored and haven't been permitted by the admin to be shown to the public, so
+  they shouldn't be visible to visitors yet. To a visitor, an unpublished work
+  and a work that doesn't exist look exactly the same.
+
+  It doesn't send the database row as it is. `publicWork` builds a new object
+  with fields picked one by one, so that only the relevant data from the work
+  is accessible.
