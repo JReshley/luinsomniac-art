@@ -1,5 +1,12 @@
 # Luinsomniac Art
 
+[![Made with AI](https://img.shields.io/badge/Made_with-AI_assistance-blue)](AI-USAGE.md)
+
+> Built with heavy help from **Claude Code** (Anthropic): I designed the site, made
+> the product and database decisions and tested everything, and Claude typed most
+> of the code. The full record, including where it got things wrong and which code
+> is mine, is in [AI-USAGE.md](AI-USAGE.md).
+
 A portfolio website where Luis Frigillana's 3D and 2D multimedia work is browsable in one place.
 
 **Live site:** (link)
