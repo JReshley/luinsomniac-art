@@ -153,15 +153,67 @@ Repository: https://github.com/JReshley/luinsomniac-art
 
 ## 2. Where the AI got it wrong
 
-Three cases. Be specific. If you write that the AI was never wrong, this section
-scores zero.
+### Case 1 - Real keys in a committed `.env.example`
 
-### Case 1 - short title
+- **What it gave me:** when it added the Express API and Supabase, Claude wrote
+  `.env.example` files with my real Supabase values in them instead of
+  placeholders, and that file is committed to a public repository.
+- **What was wrong with it:** `.env.example` is meant to be public. It shows
+  which variables exist, never their values. GitGuardian emailed me an alert
+  about the commit after I pushed. The service role key in particular can read
+  and write everything in the project, skipping every access rule.
+- **What I did instead:** I rewrote the git history so the commit holds only
+  placeholders (`your-project-ref`, an empty key), and force-pushed. I then reset
+  the keys in Supabase, because rewriting history doesn't un-leak a key that
+  GitGuardian, GitHub and any clone have already seen.
+- **Commit:** https://github.com/JReshley/luinsomniac-art/commit/389de77e325c12eb43b0a0a60d4867776339020d
+  (the rewritten commit; the leaked version no longer exists in the history)
 
-- **What it gave me:**
-- **What was wrong with it:**
-- **What I did instead:**
-- **Commit:** https://github.com/YOUR-USERNAME/YOUR-REPO/commit/SHA
+### Case 2 - Admin forms with too many fields, in no logical order
+
+- **What it gave me:** the first admin screens (45fb84a). Wherever I didn't
+  have a wireframe or an existing layout to point at, Claude filled the forms
+  with every column in the database and added explanatory text nobody needed.
+  The fields weren't ordered the way you'd actually fill them in.
+- **What was wrong with it:** it technically worked but was hard to use. Luis is
+  an artist, not a database admin. He'd be asked for a video's duration,
+  whether its audio was cleared, a related work and a social handle, none of
+  which the public site ever shows. Status had four values (draft, ready,
+  published, archived) when he only needs to know "is it live or not".
+- **What I did instead:** I tested every screen myself as if I were Luis and
+  decided the fixes. Fields the site never shows are hidden from the UI (the
+  database columns stay). Status is just Draft or Published, with Archive and
+  Restore as a separate action. Site text, Links and Brand are merged into one
+  Site settings page grouped by page. Then I had Claude rebuild the screens to
+  match. This is where testing and a human eye mattered: AI fills a blank
+  space with everything it can, and someone has to decide what to leave out.
+- **Commit:** https://github.com/JReshley/luinsomniac-art/commit/3aa2618d330664f5612fbc5c1ae48232034d0bd8
+
+### Case 3 - The page wipe skipped every in-page button
+
+- **What it gave me:** a page-change wipe animation (fd76da9) meant to run on
+  every page change.
+- **What was wrong with it:** it only played when I used the header links.
+  Buttons inside pages (like "Enter the Museum" on Home) changed page with no
+  animation, so the site felt inconsistent. I found it by clicking through
+  every page.
+- **What I did instead:** I reported it with the exact buttons that failed. The
+  cause was that the pages sat outside React Router's data router, so those
+  links never triggered a view transition. The fix moved the pages into the
+  data router.
+- **Commit:** https://github.com/JReshley/luinsomniac-art/commit/3004db7ec2e44b94dba44d45ee880b227f07e90f
+
+### Case 4 - Admin lists stayed stale after saving
+
+- **What it gave me:** the reworked admin from case 2.
+- **What was wrong with it:** after I saved a work, category or setting, the
+  list behind it still showed the old data until I reloaded the page. If a
+  refresh failed, nothing told me, so I couldn't tell whether my save had
+  worked.
+- **What I did instead:** I caught it while testing and sent it back. The fix
+  refreshes the lists straight after a save and shows a message when a refresh
+  fails.
+- **Commit:** https://github.com/JReshley/luinsomniac-art/commit/faadce776cd673027fe44168ce9bad26979e9a07
 
 ## 3. Who wrote what
 
