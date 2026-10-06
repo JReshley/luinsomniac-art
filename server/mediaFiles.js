@@ -83,6 +83,33 @@ export function resolveMediaUrls(value, storage) {
   return value
 }
 
+// The widths /api/img serves an artwork at (routes/images.js), smallest
+// first. The client's imageProps() builds its srcset from the same list.
+export const ART_WIDTHS = [400, 800, 1200, 2000]
+
+// For the public site: every artwork picture inside `value` is shown from
+// /api/img (watermarked) instead of its Drive or bucket address, and that
+// address is taken out of the reply so a visitor can't fetch the unmarked
+// original. YouTube videos and .glb models are left as they are. Call after
+// resolveMediaUrls.
+export function protectArtwork(value) {
+  const walk = (node) => {
+    if (Array.isArray(node)) node.forEach(walk)
+    else if (node && typeof node === 'object') {
+      if ('storagePathOrUrl' in node && 'source' in node) {
+        if (node.kind === 'image' && node.source !== 'youtube') {
+          node.url = `/api/img/${node.id}?w=${ART_WIDTHS.at(-1)}`
+          node.thumbnailUrl = `/api/img/${node.id}?w=${ART_WIDTHS[0]}`
+        }
+        delete node.storagePathOrUrl
+      }
+      Object.values(node).forEach(walk)
+    }
+  }
+  walk(value)
+  return value
+}
+
 // Where a file is used: [{ workId, title, role }] or [{ setting, role }].
 export function usage(db, id) {
   const uses = []

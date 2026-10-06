@@ -338,3 +338,12 @@
     translate: 100% 0;
   }
 }
+
+/* Works' pictures (watermarked, from /api/img): no iPhone long-press "Save
+   to Photos" menu and no dragging them out of the page. Right-click and
+   Android's long-press open ArtworkSaveMenu instead. */
+img[src*="/api/img/"] {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}

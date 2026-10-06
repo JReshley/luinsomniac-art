@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { prefetchPublicData } from './api/publicData.js'
+import ArtworkSaveMenu from './components/ArtworkSaveMenu.jsx'
 import Header from './components/Header.jsx'
 import Footer from './components/Footer.jsx'
 import { SiteProvider, useSite } from './components/SiteContent.jsx'
@@ -21,6 +22,7 @@ export default function App() {
 
       <ScrollToTop />
       <PageTitle />
+      <ArtworkSaveMenu />
 
       {/* Cards swing in tilted (.hang-in) and stickers slap in oversized
           (.slap-in), so for a moment they poke past the screen's edge. This

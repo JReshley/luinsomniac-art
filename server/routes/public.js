@@ -1,7 +1,7 @@
 import { Router } from 'express'
 import { pool } from '../db/pool.js'
 import { ApiError, route } from '../errors.js'
-import { resolveMediaUrls } from '../mediaFiles.js'
+import { protectArtwork, resolveMediaUrls } from '../mediaFiles.js'
 import { loadDb } from '../rows.js'
 import { categoriesOf, FEATURED_LIMIT, is3dCategory } from '../workRules.js'
 
@@ -34,6 +34,8 @@ async function publicExperience() {
 const publicMedia = (media) =>
   media
     ? {
+        // Only an opaque id; /api/img finds an artwork picture by it.
+        id: media.id,
         source: media.source,
         kind: media.kind,
         storagePathOrUrl: media.storagePathOrUrl,
@@ -98,6 +100,8 @@ const published = (db) => db.works.filter((work) => work.status === 'published')
 export function publicRoutes({ storage }) {
   const router = Router()
   const withUrls = (value) => resolveMediaUrls(value, storage)
+  // Works' pictures are shown watermarked, from /api/img (routes/images.js).
+  const withArtUrls = (value) => protectArtwork(withUrls(value))
 
   // A short cache: the site reads this on every page, and a change in the
   // admin only needs to show up within a minute. Vercel's CDN answers from a
@@ -122,7 +126,7 @@ export function publicRoutes({ storage }) {
       .sort((a, b) => (featured === 'true' ? a.featuredOrder - b.featuredOrder : 0))
       .slice(0, featured === 'true' ? FEATURED_LIMIT : undefined)
       .map((work) => publicWork(db, work))
-    response.json(withUrls(works))
+    response.json(withArtUrls(works))
   }))
 
   // A draft or archived work is "not found", the same as one that doesn't exist.
@@ -130,7 +134,7 @@ export function publicRoutes({ storage }) {
     const db = await load(WORK_TABLES)
     const row = published(db).find((item) => item.slug === request.params.slug)
     if (!row) throw new ApiError('not_found', 'There’s no work at this address.')
-    response.json(withUrls(publicWork(db, row)))
+    response.json(withArtUrls(publicWork(db, row)))
   }))
 
   // The Museum's filter chips: in order, and only ones with published work.

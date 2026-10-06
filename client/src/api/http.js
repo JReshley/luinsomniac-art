@@ -7,7 +7,7 @@ import { notify } from './changes.js'
 
 // No trailing slash. Empty means "same address as the page", which is how the
 // dev server proxies it if you set that up.
-const BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
+export const BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
 
 // The supabase-js library is only downloaded when an admin is actually using
 // the API, so visitors reading the public site never load it.

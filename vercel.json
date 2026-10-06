@@ -3,6 +3,9 @@
   "buildCommand": "npm run build --prefix client",
   "outputDirectory": "client/dist",
   "regions": ["icn1"],
+  "functions": {
+    "api/index.js": { "includeFiles": "server/assets/**", "maxDuration": 30 }
+  },
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api" },
     { "source": "/healthz", "destination": "/api" },

@@ -6,6 +6,7 @@ import { errorHandler } from './errors.js'
 import { categoryRoutes } from './routes/categories.js'
 import { contentRoutes } from './routes/content.js'
 import { dashboardRoutes } from './routes/dashboard.js'
+import { imageRoutes } from './routes/images.js'
 import { mediaRoutes } from './routes/media.js'
 import { publicRoutes } from './routes/public.js'
 import { workRoutes } from './routes/works.js'
@@ -14,6 +15,7 @@ import { workRoutes } from './routes/works.js'
 // file bucket), so a test can pass stand-ins and server.js passes the real ones.
 //
 //   /api/*         public: published works, categories and site content
+//   /api/img/*     public: works' pictures, watermarked
 //   /api/admin/*   needs a signed-in admin (see auth.js)
 export function createApp({ verifyToken, storage, allowedOrigins }) {
   const app = express()
@@ -44,6 +46,8 @@ export function createApp({ verifyToken, storage, allowedOrigins }) {
     }
   })
 
+  // Before the other public routes, which set their own short cache.
+  app.use('/api/img', imageRoutes({ storage }))
   app.use('/api', publicRoutes({ storage }))
 
   const admin = express.Router()

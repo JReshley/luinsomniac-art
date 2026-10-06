@@ -4,7 +4,7 @@
 
 import { ApiError } from './errors.js'
 import { compressImage, hashFile } from './images.js'
-import { request } from './http.js'
+import { BASE, request } from './http.js'
 
 const enc = encodeURIComponent
 
@@ -100,7 +100,24 @@ export const listActivity = (filters = {}) => request('GET', '/api/admin/activit
 
 // --- Public (no sign-in) ----------------------------------------------------
 
-export const listPublishedWorks = (filters = {}) => request('GET', '/api/works', { query: filters })
-export const getPublishedWork = (slug) => request('GET', `/api/works/${enc(slug)}`)
+// Works' pictures come as /api/img/... links (watermarked, on the API's own
+// address). This puts the API's address in front, for when it isn't the
+// page's own, as in local development.
+function withApiBase(value) {
+  const walk = (node) => {
+    if (Array.isArray(node)) node.forEach(walk)
+    else if (node && typeof node === 'object') {
+      for (const [key, item] of Object.entries(node)) {
+        if (typeof item === 'string' && item.startsWith('/api/img/')) node[key] = `${BASE}${item}`
+        else walk(item)
+      }
+    }
+  }
+  walk(value)
+  return value
+}
+
+export const listPublishedWorks = (filters = {}) => request('GET', '/api/works', { query: filters }).then(withApiBase)
+export const getPublishedWork = (slug) => request('GET', `/api/works/${enc(slug)}`).then(withApiBase)
 export const listPublicCategories = () => request('GET', '/api/categories')
 export const getSiteContent = () => request('GET', '/api/site')
