@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
 import { pool } from './db/pool.js'
 import { requireAdmin } from './auth.js'
 import { errorHandler } from './errors.js'
@@ -27,6 +28,9 @@ export function createApp({ verifyToken, storage, allowedOrigins }) {
   // Access-Control-Allow-Origin: *, which lets any site on the internet call
   // this API from a visitor's browser.
   app.use(cors({ origin: allowedOrigins }))
+  // Helmet's default would stop the site, served from another origin in
+  // development, from showing /api/img pictures; they are public by design.
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }))
   app.use(express.json({ limit: '100kb' }))
 
   // Is the process alive?
