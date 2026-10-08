@@ -11,7 +11,7 @@ A portfolio website where Luis Frigillana's 3D and 2D multimedia work is browsab
 
 **Live site:** (link)
 **API:** (link)
-**Demo video:** (link)
+**Demo video / presentation:** [Google Drive folder](https://drive.google.com/drive/folders/1SVNQYluveNzJfu5370vtAFLdgJwEL08Q?usp=sharing)
 
 > **This deployment is running in demo mode.** The interface is real; the backend
 > is simulated in your browser so the site works without a server. See
