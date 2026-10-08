@@ -9,13 +9,9 @@
 
 A portfolio website where Luis Frigillana's 3D and 2D multimedia work is browsable in one place.
 
-**Live site:** (link)
-**API:** (link)
+**Live site:** [luinsomniac-art.vercel.app](https://luinsomniac-art.vercel.app/)  
+**API:** [luinsomniac-art.vercel.app/api/works](https://luinsomniac-art.vercel.app/api/works)  
 **Demo video / presentation:** [Google Drive folder](https://drive.google.com/drive/folders/1SVNQYluveNzJfu5370vtAFLdgJwEL08Q?usp=sharing)
-
-> **This deployment is running in demo mode.** The interface is real; the backend
-> is simulated in your browser so the site works without a server. See
-> [Demo mode](#demo-mode) below. Delete this quote once your API is live.
 
 ## What it does
 - **Home** — a hero with the artist's 3D profile character, highlighted demo reel, featured
@@ -126,7 +122,7 @@ put a key, a password or a connection string in one. Supabase hands you two keys
 the **anon** key is designed to be public, the **service_role** key bypasses row
 level security entirely and belongs only in the API's environment.
 
-## Deploying 
+## Deploying
 **Database, on Supabase.** Create a project, then run `server/db/schema.sql` once
 in Database > SQL Editor. It is idempotent, so running it twice is safe. Take the
 connection string from Project Settings > Database and use the **connection
